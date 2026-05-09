@@ -116,6 +116,8 @@ export default function ExpertChat() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractError, setExtractError] = useState("");
   const messagesEndRef = useRef(null);
   const chatAreaRef = useRef(null);
 
@@ -155,7 +157,14 @@ export default function ExpertChat() {
     return newSession.id;
   };
 
-  const sendMessage = async (content, isSystem = false) => {
+  const isImageFile = (file) => ["image/jpeg", "image/png", "image/jpg"].includes(file.type) ||
+    /\.(jpg|jpeg|png)$/i.test(file.name);
+
+  const isTextFile = (file) => ["text/plain", "text/csv",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(file.type) ||
+    /\.(txt|docx|csv)$/i.test(file.name);
+
+  const sendMessage = async (content, isSystem = false, imageFileUrl = null) => {
     const sid = await getOrCreateSession();
     await base44.entities.Message.create({ session_id: sid, role: "user", content });
     queryClient.invalidateQueries({ queryKey: ["messages", sid] });
@@ -165,9 +174,13 @@ export default function ExpertChat() {
       .map((m) => `${m.role === "user" ? "משתמש" : persona.name}: ${m.content}`)
       .join("\n");
 
-    const response = await base44.integrations.Core.InvokeLLM({
+    const llmParams = {
       prompt: `${persona.system_prompt || ""}\n\nהיסטוריית שיחה:\n${history}\n\nמשתמש: ${content}\n\nענה בתור ${persona.name}:`,
-    });
+    };
+    if (imageFileUrl) {
+      llmParams.file_urls = [imageFileUrl];
+    }
+    const response = await base44.integrations.Core.InvokeLLM(llmParams);
 
     await base44.entities.Message.create({ session_id: sid, role: "assistant", content: response });
     await base44.entities.Persona.update(personaId, { last_active: new Date().toISOString() });
@@ -188,10 +201,12 @@ export default function ExpertChat() {
   };
 
   const handleFileSubmit = async () => {
-    if (!pendingFile || isUploading) return;
+    if (!pendingFile || isUploading || isExtracting) return;
+    setExtractError("");
     setIsUploading(true);
     const sid = await getOrCreateSession();
 
+    // Upload file to get URL
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pendingFile });
 
     await base44.entities.UploadedDocument.create({
@@ -202,14 +217,41 @@ export default function ExpertChat() {
       file_type: pendingFile.type,
     });
     queryClient.invalidateQueries({ queryKey: ["documents", sid] });
+    setIsUploading(false);
 
     const instruction = customInstruction.trim();
-    const prompt = `${instruction ? instruction + "\n\n" : ""}קיבלת את המסמך הבא לניתוח: ${pendingFile.name}. נתח אותו לפי הגישה והמומחיות שלך.`;
-
-    setIsUploading(false);
+    const fileName = pendingFile.name;
+    const fileRef = pendingFile;
     setPendingFile(null);
     setCustomInstruction("");
-    await sendMessage(prompt);
+
+    if (isImageFile(fileRef)) {
+      // Images: pass directly as vision input
+      const imagePrompt = `זהו שרטוט או תמונה שהועלו לניתוח. נתח אותם לפי המומחיות שלך.${instruction ? "\n\n" + instruction : ""}`;
+      await sendMessage(imagePrompt, false, file_url);
+    } else {
+      // Text / PDF / DOCX: extract content
+      setIsExtracting(true);
+      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: {
+          type: "object",
+          properties: {
+            text: { type: "string", description: "All extracted text content from the document" }
+          }
+        }
+      });
+      setIsExtracting(false);
+
+      if (result.status !== "success" || !result.output?.text) {
+        setExtractError("לא הצלחתי לקרוא את הקובץ — נסה פורמט אחר");
+        return;
+      }
+
+      const extractedText = result.output.text;
+      const prompt = `תוכן המסמך ${fileName}:\n${extractedText}\n\nהנחיית המשתמש: ${instruction || `נתח את המסמך לפי הגישה והמומחיות שלך.`}`;
+      await sendMessage(prompt);
+    }
   };
 
   const handleReReference = (doc) => {
@@ -220,6 +262,7 @@ export default function ExpertChat() {
   const handleFileReady = (file) => {
     setPendingFile(file);
     setInput("");
+    setExtractError("");
   };
 
   const resetMutation = useMutation({
@@ -251,7 +294,7 @@ export default function ExpertChat() {
     );
   }
 
-  const isBusy = isThinking || isUploading;
+  const isBusy = isThinking || isUploading || isExtracting;
 
   return (
     <div>
@@ -335,7 +378,24 @@ export default function ExpertChat() {
                     <ChatMessage key={msg.id} message={msg} personaName={persona.name} />
                   );
                 })}
-                {isThinking && (
+                {isExtracting && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start mb-4">
+                    <div className="bg-secondary/60 border border-border/30 rounded-2xl px-5 py-3">
+                      <p className="text-xs text-muted-foreground flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce inline-block" />
+                        מנתח מסמך...
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+                {extractError && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start mb-4">
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-2xl px-5 py-3">
+                      <p className="text-sm text-destructive">{extractError}</p>
+                    </div>
+                  </motion.div>
+                )}
+                {isThinking && !isExtracting && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-end mb-4">
                     <div className="bg-card border border-border/50 rounded-2xl rounded-bl-sm px-5 py-4">
                       <p className="text-xs font-bold text-accent mb-1.5 font-frank">{persona.name}</p>
@@ -408,7 +468,7 @@ export default function ExpertChat() {
                 disabled={(!input.trim() && !pendingFile) || isBusy}
                 className="h-12 px-6 bg-primary hover:bg-primary/90 text-base font-bold"
               >
-                {isUploading ? "מעלה..." : isThinking ? "חושב..." : "שלח"}
+                {isUploading ? "מעלה..." : isExtracting ? "מנתח..." : isThinking ? "חושב..." : "שלח"}
               </Button>
             </div>
             {documents.length > 0 && (
