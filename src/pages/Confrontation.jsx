@@ -61,6 +61,7 @@ function ResponseColumn({ persona, responses, isLoading }) {
 export default function Confrontation() {
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState([]);
+  const DEFAULT_QUESTION = "איך הייתם מתכננים כיכר עירונית שמחברת בין קהילות שונות?";
   const [question, setQuestion] = useState("");
   const [allResponses, setAllResponses] = useState([]);
   const [questionsAsked, setQuestionsAsked] = useState([]);
@@ -256,6 +257,14 @@ export default function Confrontation() {
               </div>
 
               {/* Question Input */}
+              {questionsAsked.length === 0 && (
+                <button
+                  onClick={() => setQuestion(DEFAULT_QUESTION)}
+                  className="mb-3 text-sm text-accent hover:text-accent/80 transition-colors underline underline-offset-2 block"
+                >
+                  השתמש בשאלת ברירת המחדל: "{DEFAULT_QUESTION}"
+                </button>
+              )}
               <div className="flex gap-3">
                 <Input
                   value={question}
