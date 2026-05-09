@@ -324,7 +324,7 @@ export default function ExpertChat() {
           ref={panelRef}
           latestAnswer={[...messages].reverse().find((m) => m.role === "assistant")?.content || null}
           personaName={persona?.name}
-          conversationId={sessionId}
+          conversationId={personaId}
         />
 
         {/* Sidebar */}
