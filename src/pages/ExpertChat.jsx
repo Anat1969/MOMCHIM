@@ -121,6 +121,7 @@ export default function ExpertChat() {
   const [extractError, setExtractError] = useState("");
   const messagesEndRef = useRef(null);
   const chatAreaRef = useRef(null);
+  const panelRef = useRef(null);
 
   const { data: personas = [] } = useQuery({
     queryKey: ["persona", personaId],
@@ -158,14 +159,11 @@ export default function ExpertChat() {
     return newSession.id;
   };
 
-  const isImageFile = (file) => ["image/jpeg", "image/png", "image/jpg"].includes(file.type) ||
-    /\.(jpg|jpeg|png)$/i.test(file.name);
+  const isVisualFile = (file) =>
+    /\.(jpg|jpeg|png|webp|gif|svg|pdf)$/i.test(file.name) ||
+    /^image\//.test(file.type) || file.type === "application/pdf";
 
-  const isTextFile = (file) => ["text/plain", "text/csv",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(file.type) ||
-    /\.(txt|docx|csv)$/i.test(file.name);
-
-  const sendMessage = async (content, isSystem = false, imageFileUrl = null) => {
+  const sendMessage = async (content, fileUrl = null) => {
     const sid = await getOrCreateSession();
     await base44.entities.Message.create({ session_id: sid, role: "user", content });
     queryClient.invalidateQueries({ queryKey: ["messages", sid] });
@@ -177,9 +175,10 @@ export default function ExpertChat() {
 
     const llmParams = {
       prompt: `${persona.system_prompt || ""}\n\nהיסטוריית שיחה:\n${history}\n\nמשתמש: ${content}\n\nענה בתור ${persona.name}:`,
+      model: fileUrl ? "gemini_3_flash" : undefined,
     };
-    if (imageFileUrl) {
-      llmParams.file_urls = [imageFileUrl];
+    if (fileUrl) {
+      llmParams.file_urls = [fileUrl];
     }
     const response = await base44.integrations.Core.InvokeLLM(llmParams);
 
@@ -198,7 +197,7 @@ export default function ExpertChat() {
     if (!input.trim() || isThinking) return;
     const msg = input.trim();
     setInput("");
-    await sendMessage(msg);
+    await sendMessage(msg, null);
   };
 
   const handleFileSubmit = async () => {
@@ -207,7 +206,7 @@ export default function ExpertChat() {
     setIsUploading(true);
     const sid = await getOrCreateSession();
 
-    // Upload file to get URL
+    // Upload file — get a persistent URL
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pendingFile });
 
     await base44.entities.UploadedDocument.create({
@@ -218,6 +217,10 @@ export default function ExpertChat() {
       file_type: pendingFile.type,
     });
     queryClient.invalidateQueries({ queryKey: ["documents", sid] });
+
+    // Add to document workspace panel with persistent server URL
+    panelRef.current?.addUploadedFileBlock(pendingFile, file_url);
+
     setIsUploading(false);
 
     const instruction = customInstruction.trim();
@@ -226,12 +229,12 @@ export default function ExpertChat() {
     setPendingFile(null);
     setCustomInstruction("");
 
-    if (isImageFile(fileRef)) {
-      // Images: pass directly as vision input
-      const imagePrompt = `זהו שרטוט או תמונה שהועלו לניתוח. נתח אותם לפי המומחיות שלך.${instruction ? "\n\n" + instruction : ""}`;
-      await sendMessage(imagePrompt, false, file_url);
+    if (isVisualFile(fileRef)) {
+      // Images, PDFs, drawings — send the actual file to vision-capable model
+      const prompt = `קובץ זה הועלה לניתוח: "${fileName}". נתח אותו לעומק לפי המומחיות והגישה שלך.${instruction ? "\n\n" + instruction : ""}`;
+      await sendMessage(prompt, file_url);
     } else {
-      // Text / PDF / DOCX: extract content
+      // Text / DOCX / CSV — extract text content first, then analyse
       setIsExtracting(true);
       const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
         file_url,
@@ -250,8 +253,9 @@ export default function ExpertChat() {
       }
 
       const extractedText = result.output.text;
-      const prompt = `תוכן המסמך ${fileName}:\n${extractedText}\n\nהנחיית המשתמש: ${instruction || `נתח את המסמך לפי הגישה והמומחיות שלך.`}`;
-      await sendMessage(prompt);
+      const prompt = `תוכן המסמך "${fileName}":\n\n${extractedText}\n\nהנחיית המשתמש: ${instruction || "נתח את המסמך לפי הגישה והמומחיות שלך."}`;
+      // Also pass file_url so the model can cross-reference visually if needed
+      await sendMessage(prompt, file_url);
     }
   };
 
@@ -317,6 +321,7 @@ export default function ExpertChat() {
       >
         {/* Document Workspace Panel (RTL: appears on left visually) */}
         <DocumentWorkspacePanel
+          ref={panelRef}
           latestAnswer={[...messages].reverse().find((m) => m.role === "assistant")?.content || null}
           personaName={persona?.name}
           conversationId={sessionId}

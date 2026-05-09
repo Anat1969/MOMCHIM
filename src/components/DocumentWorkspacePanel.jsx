@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Copy, Check, GripVertical, Pencil, Paperclip, Download, CopyPlus, X } from "lucide-react";
@@ -170,7 +170,12 @@ function BlockItem({ block, index, onDelete, onRenameTitle }) {
 
           {/* Content preview */}
           {block.imageUrl ? (
-            <img src={block.imageUrl} alt={block.title} className="w-full rounded-md object-cover max-h-36 mt-1" />
+            <img
+              src={block.imageUrl}
+              alt={block.title}
+              className="w-full rounded-md object-cover max-h-36 mt-1"
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
           ) : block.pdfUrl ? (
             <a
               href={block.pdfUrl}
@@ -179,6 +184,15 @@ function BlockItem({ block, index, onDelete, onRenameTitle }) {
               className="text-xs text-accent underline pr-4 block mt-1"
             >
               פתח PDF בחלון חדש
+            </a>
+          ) : block.fileUrl ? (
+            <a
+              href={block.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent underline pr-4 block mt-1"
+            >
+              פתח קובץ בחלון חדש
             </a>
           ) : (
             <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 pr-4">
@@ -193,7 +207,7 @@ function BlockItem({ block, index, onDelete, onRenameTitle }) {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function DocumentWorkspacePanel({ latestAnswer, personaName, conversationId }) {
+const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ latestAnswer, personaName, conversationId }, ref) {
   // conversationId is namespaced internally: "conv_<id>"
   const convKey = conversationId ? `conv_${conversationId}` : null;
 
@@ -267,6 +281,26 @@ export default function DocumentWorkspacePanel({ latestAnswer, personaName, conv
     URL.revokeObjectURL(url);
   };
 
+  // Called from ExpertChat after a successful server upload — uses persistent URL
+  const addUploadedFileBlock = useCallback((file, serverUrl) => {
+    const uniqueName = deduplicateFileName(file.name, blocks);
+    const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name) || /^image\//.test(file.type);
+    const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
+
+    let block;
+    if (isImage) {
+      block = { id: `block-${Date.now()}`, title: uniqueName, content: "", imageUrl: serverUrl, createdAt: new Date().toISOString(), readOnly: true };
+    } else if (isPdf) {
+      block = { id: `block-${Date.now()}`, title: uniqueName, content: "[קובץ PDF]", pdfUrl: serverUrl, createdAt: new Date().toISOString(), readOnly: true };
+    } else {
+      block = { id: `block-${Date.now()}`, title: uniqueName, content: `[קובץ: ${file.name}]`, fileUrl: serverUrl, createdAt: new Date().toISOString(), readOnly: true };
+    }
+    setBlocks([block, ...blocks]);
+  }, [blocks, setBlocks]);
+
+  useImperativeHandle(ref, () => ({ addUploadedFileBlock }), [addUploadedFileBlock]);
+
+  // Panel drop-zone: local file (blob URLs — fine for same session)
   const handleUploadFile = (file) => {
     const allowed = /\.(txt|md|docx|pdf|jpg|jpeg|png|webp)$/i.test(file.name);
     if (!allowed) return;
@@ -469,7 +503,9 @@ export default function DocumentWorkspacePanel({ latestAnswer, personaName, conv
       </div>
     </div>
   );
-}
+});
+
+export default DocumentWorkspacePanel;
 
 // Exported helper so ExpertChat can clean up on conversation delete/reset
 export { deleteConvBlocks };
