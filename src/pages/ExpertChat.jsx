@@ -9,7 +9,7 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import ChatMessage from "../components/ChatMessage";
 import EmptyState from "../components/EmptyState";
 import FileUploadZone from "../components/FileUploadZone";
-import DocumentWorkspacePanel from "../components/DocumentWorkspacePanel";
+import DocumentWorkspacePanel, { deleteConvBlocks } from "../components/DocumentWorkspacePanel";
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -268,7 +268,10 @@ export default function ExpertChat() {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      if (sessionId) await base44.entities.ChatSession.update(sessionId, { is_active: false });
+      if (sessionId) {
+        await base44.entities.ChatSession.update(sessionId, { is_active: false });
+        deleteConvBlocks(`conv_${sessionId}`);
+      }
       queryClient.invalidateQueries({ queryKey: ["sessions", personaId] });
       queryClient.invalidateQueries({ queryKey: ["messages"] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
@@ -316,6 +319,7 @@ export default function ExpertChat() {
         <DocumentWorkspacePanel
           latestAnswer={[...messages].reverse().find((m) => m.role === "assistant")?.content || null}
           personaName={persona?.name}
+          conversationId={sessionId}
         />
 
         {/* Sidebar */}
