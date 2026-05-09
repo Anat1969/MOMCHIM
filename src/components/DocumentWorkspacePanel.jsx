@@ -1,33 +1,32 @@
 import { useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, Copy, Check, GripVertical, Pencil, Paperclip, Download, CopyPlus, X } from "lucide-react";
+import {
+  ChevronRight, ChevronLeft, Copy, Check, GripVertical, Pencil,
+  Paperclip, Download, CopyPlus, X, FileText, FileCode, FileType
+} from "lucide-react";
 
 const STORAGE_KEY = "expert-panel-state";
 const COLLAPSED_KEY = "expert-panel-collapsed";
 
-// ─── Storage helpers (keyed per conversation) ────────────────────────────────
+// ─── Storage ─────────────────────────────────────────────────────────────────
 
 function readAllPanelData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    // Migration: if the old shape had a top-level `blocks` array, migrate it
     if (Array.isArray(parsed.blocks)) {
       const migrated = { conv_legacy: { blocks: parsed.blocks } };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
       return { _migrated: true, ...migrated };
     }
     return parsed;
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
 function loadConvBlocks(convId) {
-  const all = readAllPanelData();
-  return all[convId]?.blocks || [];
+  return readAllPanelData()[convId]?.blocks || [];
 }
 
 function saveConvBlocks(convId, blocks) {
@@ -57,8 +56,6 @@ function saveCollapsed(v) {
   try { localStorage.setItem(COLLAPSED_KEY, String(v)); } catch {}
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function formatDate(iso) {
   return new Date(iso).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
 }
@@ -70,6 +67,13 @@ function deduplicateFileName(name, existingBlocks) {
   const base = name.slice(0, name.length - ext.length);
   return `${base}-${Date.now()}${ext}`;
 }
+
+// Export format config
+const EXPORT_FORMATS = [
+  { id: "md", label: "Markdown", ext: ".md", icon: FileCode, desc: "עם עיצוב" },
+  { id: "txt", label: "Plain Text", ext: ".txt", icon: FileType, desc: "טקסט נקי" },
+  { id: "html", label: "HTML", ext: ".html", icon: FileText, desc: "לדפדפן" },
+];
 
 // ─── BlockItem ────────────────────────────────────────────────────────────────
 
@@ -95,120 +99,119 @@ function BlockItem({ block, index, onDelete, onRenameTitle }) {
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`group relative rounded-lg border bg-card p-3 mb-2 transition-colors ${
-            snapshot.isDragging ? "border-accent shadow-lg" : "border-border/50 hover:border-border"
+          className={`group relative rounded-lg border bg-card mb-1.5 transition-all ${
+            snapshot.isDragging
+              ? "border-accent shadow-md"
+              : "border-border/60 hover:border-border hover:shadow-sm"
           }`}
         >
           {/* Drag handle */}
           <div
             {...provided.dragHandleProps}
-            className="absolute right-0 top-0 bottom-0 w-6 flex items-center justify-center opacity-0 group-hover:opacity-40 hover:!opacity-80 cursor-grab active:cursor-grabbing transition-opacity"
+            className="absolute right-0 top-0 bottom-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-30 hover:!opacity-70 cursor-grab active:cursor-grabbing transition-opacity"
           >
-            <GripVertical size={14} className="text-muted-foreground" />
+            <GripVertical size={12} className="text-muted-foreground" />
           </div>
 
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2 pr-4 mb-1.5">
-            <div className="flex-1 min-w-0">
-              {editingTitle ? (
-                <input
-                  autoFocus
-                  value={titleVal}
-                  onChange={(e) => setTitleVal(e.target.value)}
-                  onBlur={commitTitle}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitTitle();
-                    if (e.key === "Escape") setEditingTitle(false);
-                  }}
-                  className="w-full text-xs font-bold bg-secondary/60 border border-accent/40 rounded px-1.5 py-0.5 outline-none"
-                />
-              ) : (
+          <div className="px-3 py-2.5 pr-5">
+            {/* Title row */}
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex-1 min-w-0">
+                {editingTitle ? (
+                  <input
+                    autoFocus
+                    value={titleVal}
+                    onChange={(e) => setTitleVal(e.target.value)}
+                    onBlur={commitTitle}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitTitle();
+                      if (e.key === "Escape") setEditingTitle(false);
+                    }}
+                    className="w-full text-xs font-semibold bg-secondary/60 border border-accent/40 rounded px-1.5 py-0.5 outline-none"
+                  />
+                ) : (
+                  <button
+                    onClick={() => !block.readOnly && setEditingTitle(true)}
+                    className="text-xs font-semibold text-foreground text-right truncate max-w-full flex items-center gap-1 hover:text-accent transition-colors"
+                  >
+                    {block.readOnly && <Paperclip size={9} className="flex-shrink-0 text-muted-foreground" />}
+                    <span className="truncate">{block.title}</span>
+                    {!block.readOnly && (
+                      <Pencil size={9} className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity" />
+                    )}
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-0.5 flex-shrink-0">
                 <button
-                  onClick={() => !block.readOnly && setEditingTitle(true)}
-                  className="text-xs font-bold text-foreground text-right truncate max-w-full flex items-center gap-1 hover:text-accent transition-colors"
+                  onClick={handleCopy}
+                  className="relative p-1 rounded hover:bg-secondary transition-colors"
+                  title="העתק"
                 >
-                  {block.readOnly && <Paperclip size={10} className="flex-shrink-0 text-muted-foreground" />}
-                  {block.title}
-                  {!block.readOnly && (
-                    <Pencil size={9} className="flex-shrink-0 opacity-0 group-hover:opacity-50 transition-opacity" />
-                  )}
+                  {copied ? <Check size={11} className="text-green-500" /> : <Copy size={11} className="text-muted-foreground" />}
+                  <AnimatePresence>
+                    {copied && (
+                      <motion.span
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: -20 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute -top-1 right-0 text-xs bg-foreground text-background rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none z-10"
+                      >
+                        הועתק
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </button>
-              )}
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {formatDate(block.createdAt)} · {block.content.length} תווים
-              </p>
+                <button
+                  onClick={() => onDelete(block.id)}
+                  className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                  title="הסר"
+                >
+                  <X size={11} className="text-muted-foreground hover:text-destructive" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={handleCopy}
-                className="relative p-1 rounded hover:bg-secondary/60 transition-colors"
-                title="העתק"
-              >
-                {copied ? <Check size={12} className="text-green-500" /> : <Copy size={12} className="text-muted-foreground" />}
-                <AnimatePresence>
-                  {copied && (
-                    <motion.span
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: -20 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute -top-1 right-0 text-xs bg-foreground text-background rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none z-10"
-                    >
-                      הועתק
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </button>
-              <button
-                onClick={() => onDelete(block.id)}
-                className="p-1 rounded hover:bg-destructive/10 transition-colors"
-                title="הסר"
-              >
-                <X size={12} className="text-muted-foreground hover:text-destructive" />
-              </button>
-            </div>
-          </div>
 
-          {/* Content preview */}
-          {block.imageUrl ? (
-            <img
-              src={block.imageUrl}
-              alt={block.title}
-              className="w-full rounded-md object-cover max-h-36 mt-1"
-              onError={(e) => { e.target.style.display = "none"; }}
-            />
-          ) : block.pdfUrl ? (
-            <a
-              href={block.pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-accent underline pr-4 block mt-1"
-            >
-              פתח PDF בחלון חדש
-            </a>
-          ) : block.fileUrl ? (
-            <a
-              href={block.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-accent underline pr-4 block mt-1"
-            >
-              פתח קובץ בחלון חדש
-            </a>
-          ) : (
-            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 pr-4">
-              {block.content}
+            {/* Meta */}
+            <p className="text-[10px] text-muted-foreground mb-1.5">
+              {formatDate(block.createdAt)}{block.content?.length > 0 ? ` · ${block.content.length} תווים` : ""}
             </p>
-          )}
+
+            {/* Content preview */}
+            {block.imageUrl ? (
+              <img
+                src={block.imageUrl}
+                alt={block.title}
+                className="w-full rounded object-cover max-h-28"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            ) : block.pdfUrl ? (
+              <a href={block.pdfUrl} target="_blank" rel="noopener noreferrer"
+                className="text-[10px] text-accent underline underline-offset-2 flex items-center gap-1">
+                <FileText size={10} />
+                פתח PDF
+              </a>
+            ) : block.fileUrl ? (
+              <a href={block.fileUrl} target="_blank" rel="noopener noreferrer"
+                className="text-[10px] text-accent underline underline-offset-2 flex items-center gap-1">
+                <FileText size={10} />
+                פתח קובץ
+              </a>
+            ) : (
+              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
+                {block.content}
+              </p>
+            )}
+          </div>
         </div>
       )}
     </Draggable>
   );
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// ─── Main Panel ───────────────────────────────────────────────────────────────
 
 const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ latestAnswer, personaName, conversationId }, ref) {
-  // conversationId is namespaced internally: "conv_<id>"
   const convKey = conversationId ? `conv_${conversationId}` : null;
 
   const [blocks, setBlocksState] = useState(() => (convKey ? loadConvBlocks(convKey) : []));
@@ -219,7 +222,6 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
   const [showMigrationNotice, setShowMigrationNotice] = useState(false);
   const uploadRef = useRef(null);
 
-  // Re-hydrate blocks whenever conversationId changes
   useEffect(() => {
     if (!convKey) { setBlocksState([]); return; }
     const all = readAllPanelData();
@@ -234,25 +236,20 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
 
   const setCollapsed = (v) => { setCollapsedState(v); saveCollapsed(v); };
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
-
   const saveAnswer = () => {
     if (!latestAnswer) return;
     const firstLine = latestAnswer.split("\n")[0].replace(/^#+\s*/, "").slice(0, 60) || "תשובת מומחה";
-    const block = {
+    setBlocks([{
       id: `block-${Date.now()}`,
       title: firstLine,
       content: latestAnswer,
       createdAt: new Date().toISOString(),
       readOnly: false,
-    };
-    setBlocks([block, ...blocks]);
+    }, ...blocks]);
   };
 
   const deleteBlock = (id) => setBlocks(blocks.filter((b) => b.id !== id));
-
-  const renameTitle = (id, title) =>
-    setBlocks(blocks.map((b) => (b.id === id ? { ...b, title } : b)));
+  const renameTitle = (id, title) => setBlocks(blocks.map((b) => (b.id === id ? { ...b, title } : b)));
 
   const onDragEnd = (result) => {
     if (!result.destination) return;
@@ -270,18 +267,25 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
   };
 
   const exportDoc = () => {
-    const text = blocks.map((b) => `# ${b.title}\n\n${b.content}`).join("\n\n---\n\n");
+    const fmt = EXPORT_FORMATS.find(f => f.id === exportFormat);
+    let text;
+    if (exportFormat === "html") {
+      text = `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>מסמך מומחה</title></head><body style="font-family:sans-serif;max-width:800px;margin:40px auto;padding:20px">` +
+        blocks.map((b) => `<h2>${b.title}</h2><div>${b.content.replace(/\n/g, "<br>")}</div><hr>`).join("\n") +
+        `</body></html>`;
+    } else {
+      text = blocks.map((b) => `# ${b.title}\n\n${b.content}`).join("\n\n---\n\n");
+    }
     const date = new Date().toISOString().slice(0, 10);
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `expert-answer-${date}.${exportFormat}`;
+    a.download = `expert-${date}${fmt.ext}`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  // Called from ExpertChat after a successful server upload — uses persistent URL
   const addUploadedFileBlock = useCallback((file, serverUrl) => {
     const uniqueName = deduplicateFileName(file.name, blocks);
     const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name) || /^image\//.test(file.type);
@@ -300,7 +304,6 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
 
   useImperativeHandle(ref, () => ({ addUploadedFileBlock }), [addUploadedFileBlock]);
 
-  // Panel drop-zone: local file (blob URLs — fine for same session)
   const handleUploadFile = (file) => {
     const allowed = /\.(txt|md|docx|pdf|jpg|jpeg|png|webp)$/i.test(file.name);
     if (!allowed) return;
@@ -309,33 +312,16 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
     const uniqueName = deduplicateFileName(file.name, blocks);
 
     if (isImage) {
-      const url = URL.createObjectURL(file);
-      setBlocks([
-        { id: `block-${Date.now()}`, title: uniqueName, content: "", imageUrl: url, createdAt: new Date().toISOString(), readOnly: true },
-        ...blocks,
-      ]);
+      setBlocks([{ id: `block-${Date.now()}`, title: uniqueName, content: "", imageUrl: URL.createObjectURL(file), createdAt: new Date().toISOString(), readOnly: true }, ...blocks]);
       return;
     }
     if (isPdf) {
-      setBlocks([
-        {
-          id: `block-${Date.now()}`,
-          title: uniqueName,
-          content: "[קובץ PDF — ניתן לצפות בו בלבד]",
-          pdfUrl: URL.createObjectURL(file),
-          createdAt: new Date().toISOString(),
-          readOnly: true,
-        },
-        ...blocks,
-      ]);
+      setBlocks([{ id: `block-${Date.now()}`, title: uniqueName, content: "[PDF]", pdfUrl: URL.createObjectURL(file), createdAt: new Date().toISOString(), readOnly: true }, ...blocks]);
       return;
     }
     const reader = new FileReader();
     reader.onload = (e) => {
-      setBlocks([
-        { id: `block-${Date.now()}`, title: uniqueName, content: e.target.result || "", createdAt: new Date().toISOString(), readOnly: true },
-        ...blocks,
-      ]);
+      setBlocks([{ id: `block-${Date.now()}`, title: uniqueName, content: e.target.result || "", createdAt: new Date().toISOString(), readOnly: true }, ...blocks]);
     };
     reader.readAsText(file);
   };
@@ -351,17 +337,22 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
 
   if (collapsed) {
     return (
-      <div className="flex-shrink-0 w-8 border-r border-border/30 bg-secondary/20 flex flex-col items-center py-3 gap-3">
+      <div className="flex-shrink-0 w-7 border-r border-border/40 bg-secondary/20 flex flex-col items-center py-3 gap-3">
         <button
           onClick={() => setCollapsed(false)}
-          className="p-1 rounded hover:bg-secondary/60 transition-colors"
+          className="p-1 rounded hover:bg-secondary transition-colors"
           title="פתח לוח מסמך"
         >
-          <ChevronRight size={16} className="text-muted-foreground" />
+          <ChevronRight size={14} className="text-muted-foreground" />
         </button>
-        <span className="text-xs text-muted-foreground [writing-mode:vertical-rl] rotate-180 mt-2 select-none">
+        <span className="text-[10px] text-muted-foreground [writing-mode:vertical-rl] rotate-180 mt-2 select-none tracking-widest">
           מסמך
         </span>
+        {blocks.length > 0 && (
+          <span className="w-4 h-4 rounded-full bg-accent/20 text-accent text-[9px] flex items-center justify-center font-bold">
+            {blocks.length}
+          </span>
+        )}
       </div>
     );
   }
@@ -369,65 +360,77 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
   // ── Expanded panel ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-shrink-0 w-80 border-r border-border/30 bg-secondary/10 flex flex-col overflow-hidden">
+    <div className="flex-shrink-0 w-72 border-r border-border/40 bg-background flex flex-col overflow-hidden">
+
       {/* Migration notice */}
       <AnimatePresence>
         {showMigrationNotice && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="bg-accent/10 border-b border-accent/30 px-3 py-2 flex items-center justify-between gap-2 overflow-hidden"
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="bg-accent/10 border-b border-accent/20 px-3 py-1.5 flex items-center justify-between gap-2 overflow-hidden"
           >
-            <p className="text-xs text-accent leading-snug">מסמכים קודמים הועברו לארכיון</p>
-            <button onClick={() => setShowMigrationNotice(false)} className="text-xs text-muted-foreground hover:text-foreground flex-shrink-0">
-              <X size={12} />
+            <p className="text-[10px] text-accent">מסמכים קודמים הועברו לארכיון</p>
+            <button onClick={() => setShowMigrationNotice(false)}>
+              <X size={10} className="text-muted-foreground hover:text-foreground" />
             </button>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-secondary/20 flex-shrink-0">
-        <span className="text-sm font-bold font-frank text-foreground">מסמך</span>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-secondary/30 flex-shrink-0">
         <div className="flex items-center gap-2">
+          <span className="text-xs font-bold font-frank text-foreground tracking-wide">מסמך</span>
+          {blocks.length > 0 && (
+            <span className="text-[10px] text-muted-foreground bg-secondary rounded-full px-1.5 py-0.5">
+              {blocks.length}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
           {blocks.length > 0 && (
             <button
               onClick={copyAll}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 rounded hover:bg-secondary transition-colors"
               title="העתק הכל"
             >
-              {allCopied ? <Check size={13} className="text-green-500" /> : <CopyPlus size={13} />}
+              {allCopied ? <Check size={12} className="text-green-500" /> : <CopyPlus size={12} className="text-muted-foreground" />}
             </button>
           )}
           <button
             onClick={() => setCollapsed(true)}
-            className="p-1 rounded hover:bg-secondary/60 transition-colors"
+            className="p-1 rounded hover:bg-secondary transition-colors"
             title="כווץ"
           >
-            <ChevronLeft size={16} className="text-muted-foreground" />
+            <ChevronLeft size={14} className="text-muted-foreground" />
           </button>
         </div>
       </div>
 
-      {/* Save button */}
+      {/* Save latest answer */}
       {latestAnswer && (
-        <div className="px-3 pt-3 flex-shrink-0">
+        <div className="px-3 pt-2.5 flex-shrink-0">
           <button
             onClick={saveAnswer}
-            className="w-full py-2 rounded-lg border border-accent/40 bg-accent/10 text-accent text-xs font-bold hover:bg-accent/20 transition-colors"
+            className="w-full py-1.5 rounded border border-accent/50 bg-accent/10 text-accent text-xs font-semibold hover:bg-accent/20 transition-colors flex items-center justify-center gap-1.5"
           >
-            + שמור תשובה במסמך
+            <span className="text-sm leading-none">+</span>
+            שמור תשובה אחרונה
           </button>
         </div>
       )}
 
       {/* Blocks list */}
-      <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="flex-1 overflow-y-auto px-3 py-2">
         {blocks.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center mt-8 leading-relaxed">
-            שמור תשובות מהצ'אט כאן,<br />או גרור קובץ לאזור למטה
-          </p>
+          <div className="flex flex-col items-center justify-center h-full text-center py-8 gap-2">
+            <div className="w-8 h-8 rounded-lg bg-secondary/60 flex items-center justify-center">
+              <FileText size={14} className="text-muted-foreground" />
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              שמור תשובות מהצ'אט<br />או גרור קובץ לאזור למטה
+            </p>
+          </div>
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="panel-blocks">
@@ -450,22 +453,22 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
         )}
       </div>
 
-      {/* Footer: upload + export */}
-      <div className="border-t border-border/30 px-3 py-3 flex-shrink-0 space-y-2">
+      {/* Footer */}
+      <div className="border-t border-border/40 px-3 py-2.5 flex-shrink-0 space-y-2 bg-secondary/10">
         {/* Upload drop zone */}
         <div
           onDragOver={(e) => { e.preventDefault(); setDraggingOver(true); }}
           onDragLeave={() => setDraggingOver(false)}
           onDrop={onDropFile}
           onClick={() => uploadRef.current?.click()}
-          className={`rounded-lg border border-dashed text-xs text-center py-2.5 cursor-pointer transition-colors ${
+          className={`rounded border border-dashed text-[11px] text-center py-2 cursor-pointer transition-colors flex items-center justify-center gap-1.5 ${
             draggingOver
               ? "border-accent bg-accent/10 text-accent"
-              : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+              : "border-border/50 text-muted-foreground hover:border-accent/40 hover:text-foreground"
           }`}
         >
-          <Paperclip size={12} className="inline ml-1" />
-          גרור קובץ .txt / .md / .docx / .pdf / תמונה
+          <Paperclip size={11} />
+          גרור קובץ או לחץ להעלאה
         </div>
         <input
           ref={uploadRef}
@@ -475,29 +478,37 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
           onChange={(e) => { if (e.target.files[0]) handleUploadFile(e.target.files[0]); e.target.value = ""; }}
         />
 
-        {/* Export row */}
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-border/50 overflow-hidden text-xs">
-            <button
-              onClick={() => setExportFormat("md")}
-              className={`px-2.5 py-1.5 transition-colors ${exportFormat === "md" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/60"}`}
-            >
-              .md
-            </button>
-            <button
-              onClick={() => setExportFormat("txt")}
-              className={`px-2.5 py-1.5 transition-colors ${exportFormat === "txt" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/60"}`}
-            >
-              .txt
-            </button>
+        {/* Export format — 3-way toggle */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">פורמט ייצוא</p>
+          <div className="grid grid-cols-3 gap-1 rounded-lg border border-border/50 p-0.5 bg-secondary/20">
+            {EXPORT_FORMATS.map((fmt) => {
+              const Icon = fmt.icon;
+              return (
+                <button
+                  key={fmt.id}
+                  onClick={() => setExportFormat(fmt.id)}
+                  title={fmt.desc}
+                  className={`flex flex-col items-center gap-0.5 py-1.5 rounded text-center transition-all ${
+                    exportFormat === fmt.id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                  }`}
+                >
+                  <Icon size={12} />
+                  <span className="text-[10px] font-medium">{fmt.label.split(" ")[0]}</span>
+                </button>
+              );
+            })}
           </div>
+
           <button
             onClick={exportDoc}
             disabled={blocks.length === 0}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-border/50 text-xs text-muted-foreground hover:text-foreground hover:border-border disabled:opacity-40 transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded border border-border/50 text-xs text-muted-foreground hover:text-foreground hover:border-border disabled:opacity-40 transition-colors bg-card"
           >
             <Download size={12} />
-            יצא מסמך
+            יצא {EXPORT_FORMATS.find(f => f.id === exportFormat)?.ext}
           </button>
         </div>
       </div>
@@ -506,6 +517,4 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
 });
 
 export default DocumentWorkspacePanel;
-
-// Exported helper so ExpertChat can clean up on conversation delete/reset
 export { deleteConvBlocks };

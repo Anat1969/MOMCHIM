@@ -93,3 +93,16 @@
     @apply bg-background text-foreground font-heebo;
   }
 }
+
+@layer utilities {
+  /* Ordered list items in chat messages */
+  .prose-custom ol li {
+    list-style: decimal;
+    list-style-position: inside;
+    display: list-item;
+    padding-right: 0;
+  }
+  .prose-custom ol li > span {
+    display: inline;
+  }
+}
