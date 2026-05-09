@@ -1,25 +1,28 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import Breadcrumbs from "../components/Breadcrumbs";
 import EmptyState from "../components/EmptyState";
+import FileUploadZone from "../components/FileUploadZone";
+
+function formatSize(bytes) {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
 
 function ResponseColumn({ persona, responses, isLoading }) {
   const personaResponses = responses.filter((r) => r.persona_id === persona.id);
-
   return (
     <div className="flex-1 min-w-[260px] border border-border/30 rounded-xl bg-card overflow-hidden">
       <div className="p-4 border-b border-border/30 bg-secondary/30">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-frank font-bold text-sm">
-              {persona.name?.[0]}
-            </span>
+            <span className="text-primary-foreground font-frank font-bold text-sm">{persona.name?.[0]}</span>
           </div>
           <div>
             <h4 className="font-bold font-frank text-foreground text-sm">{persona.name}</h4>
@@ -29,9 +32,7 @@ function ResponseColumn({ persona, responses, isLoading }) {
       </div>
       <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
         {personaResponses.length === 0 && !isLoading && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            ממתין לשאלה...
-          </p>
+          <p className="text-sm text-muted-foreground text-center py-4">ממתין לשאלה...</p>
         )}
         {personaResponses.map((r, i) => (
           <motion.div
@@ -41,9 +42,7 @@ function ResponseColumn({ persona, responses, isLoading }) {
             className="text-sm leading-relaxed prose prose-sm max-w-none"
           >
             <ReactMarkdown>{r.response}</ReactMarkdown>
-            {i < personaResponses.length - 1 && (
-              <hr className="border-border/30 my-3" />
-            )}
+            {i < personaResponses.length - 1 && <hr className="border-border/30 my-3" />}
           </motion.div>
         ))}
         {isLoading && (
@@ -59,15 +58,15 @@ function ResponseColumn({ persona, responses, isLoading }) {
 }
 
 export default function Confrontation() {
-  const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState([]);
-  const DEFAULT_QUESTION = "איך הייתם מתכננים כיכר עירונית שמחברת בין קהילות שונות?";
   const [question, setQuestion] = useState("");
   const [allResponses, setAllResponses] = useState([]);
   const [questionsAsked, setQuestionsAsked] = useState([]);
   const [isAsking, setIsAsking] = useState(false);
+  const [attachedDoc, setAttachedDoc] = useState(null); // { file, url } or null
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
-  const { data: personas = [], isLoading } = useQuery({
+  const { data: personas = [] } = useQuery({
     queryKey: ["personas"],
     queryFn: () => base44.entities.Persona.list("-updated_date"),
   });
@@ -80,9 +79,16 @@ export default function Confrontation() {
     );
   };
 
+  const handleAttachDoc = async (file) => {
+    setIsUploadingDoc(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setAttachedDoc({ file, url: file_url });
+    setIsUploadingDoc(false);
+  };
+
   const askQuestion = async () => {
     if (!question.trim() || selectedIds.length < 2 || isAsking) return;
-    
+
     const currentQuestion = question.trim();
     setQuestionsAsked((prev) => [...prev, currentQuestion]);
     setQuestion("");
@@ -102,19 +108,21 @@ export default function Confrontation() {
       .join("\n\n");
 
     const questionIndex = questionsAsked.length;
+    const docContext = attachedDoc
+      ? `\n\nמסמך מצורף לניתוח: ${attachedDoc.file.name}. נתח אותו לפי הגישה שלך ביחד עם מענה על השאלה.`
+      : "";
 
     const promises = selectedPersonas.map(async (persona) => {
       const prompt = `${persona.system_prompt || ""}\n\n${
         previousContext ? `הקשר קודם:\n${previousContext}\n\n` : ""
-      }שאלה: ${currentQuestion}\n\nענה בתור ${persona.name} בעברית. תשובה ממוקדת ותמציתית.`;
+      }שאלה: ${currentQuestion}${docContext}\n\nענה בתור ${persona.name} בעברית. תשובה ממוקדת ותמציתית.`;
 
-      const response = await base44.integrations.Core.InvokeLLM({ prompt });
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        ...(attachedDoc ? { file_urls: [attachedDoc.url] } : {}),
+      });
 
-      return {
-        persona_id: persona.id,
-        response,
-        questionIndex,
-      };
+      return { persona_id: persona.id, response, questionIndex };
     });
 
     const results = await Promise.all(promises);
@@ -124,7 +132,9 @@ export default function Confrontation() {
 
   const exportText = () => {
     let text = "עימות מומחים\n" + "=".repeat(40) + "\n\n";
-    text += `משתתפים: ${selectedPersonas.map((p) => p.name).join(", ")}\n\n`;
+    text += `משתתפים: ${selectedPersonas.map((p) => p.name).join(", ")}\n`;
+    if (attachedDoc) text += `מסמך: ${attachedDoc.file.name}\n`;
+    text += "\n";
 
     questionsAsked.forEach((q, i) => {
       text += `שאלה ${i + 1}: ${q}\n` + "-".repeat(30) + "\n";
@@ -147,13 +157,8 @@ export default function Confrontation() {
 
   return (
     <div>
-      <Breadcrumbs
-        items={[{ label: "דשבורד", href: "/" }, { label: "עימות מומחים" }]}
-      />
-
-      <h2 className="text-3xl font-black font-frank text-foreground mb-6">
-        עימות מומחים
-      </h2>
+      <Breadcrumbs items={[{ label: "דשבורד", href: "/" }, { label: "עימות מומחים" }]} />
+      <h2 className="text-3xl font-black font-frank text-foreground mb-6">עימות מומחים</h2>
 
       {personas.length < 2 ? (
         <EmptyState
@@ -165,9 +170,7 @@ export default function Confrontation() {
           {/* Persona Selection */}
           {selectedIds.length < 2 && (
             <div className="mb-8">
-              <p className="text-lg font-semibold text-foreground mb-3">
-                בחר 2–4 מומחים לעימות
-              </p>
+              <p className="text-lg font-semibold text-foreground mb-3">בחר 2–4 מומחים לעימות</p>
               <p className="text-sm text-muted-foreground mb-4">
                 סמן את המומחים שישתתפו. כל אחד יענה מנקודת המבט הייחודית שלו.
               </p>
@@ -198,28 +201,20 @@ export default function Confrontation() {
             </div>
           )}
 
-          {/* Active Confrontation */}
           {selectedIds.length >= 2 && (
             <>
               {/* Selected bar */}
-              <div className="flex items-center gap-3 mb-6 p-4 rounded-xl bg-secondary/50 border border-border/30">
+              <div className="flex items-center gap-3 mb-6 p-4 rounded-xl bg-secondary/50 border border-border/30 flex-wrap">
                 <p className="text-sm text-muted-foreground">משתתפים:</p>
                 <div className="flex gap-2 flex-wrap flex-1">
                   {selectedPersonas.map((p) => (
-                    <span
-                      key={p.id}
-                      className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-medium"
-                    >
+                    <span key={p.id} className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-medium">
                       {p.name}
                     </span>
                   ))}
                 </div>
                 <button
-                  onClick={() => {
-                    setSelectedIds([]);
-                    setAllResponses([]);
-                    setQuestionsAsked([]);
-                  }}
+                  onClick={() => { setSelectedIds([]); setAllResponses([]); setQuestionsAsked([]); setAttachedDoc(null); }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   בחר מחדש
@@ -227,11 +222,45 @@ export default function Confrontation() {
                 {questionsAsked.length > 0 && (
                   <button
                     onClick={exportText}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-accent/50 text-accent 
-                               hover:bg-accent/10 transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-lg border border-accent/50 text-accent hover:bg-accent/10 transition-colors"
                   >
                     ייצא כטקסט — שומר את כל השאלות והתשובות לקובץ
                   </button>
+                )}
+              </div>
+
+              {/* Document attachment for confrontation */}
+              <div className="mb-5 p-4 rounded-xl border border-border/30 bg-card">
+                <p className="text-sm font-semibold text-foreground mb-2">
+                  מסמך משותף לכל המומחים (אופציונלי)
+                </p>
+                {attachedDoc ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 p-2.5 rounded-lg bg-accent/10 border border-accent/30">
+                      <p className="text-sm font-bold">{attachedDoc.file.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatSize(attachedDoc.file.size)}</p>
+                    </div>
+                    <button
+                      onClick={() => setAttachedDoc(null)}
+                      className="text-xs text-destructive hover:underline"
+                    >
+                      הסר מסמך
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <FileUploadZone
+                      onFile={handleAttachDoc}
+                      currentCount={0}
+                      disabled={isUploadingDoc || isAsking}
+                    />
+                    {isUploadingDoc && (
+                      <p className="text-xs text-muted-foreground animate-pulse">מעלה מסמך...</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      המסמך יועבר לכל המומחים לניתוח מקביל לפי גישתם
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -247,24 +276,11 @@ export default function Confrontation() {
               {/* Response Columns */}
               <div className="flex gap-4 overflow-x-auto pb-4 mb-6">
                 {selectedPersonas.map((p) => (
-                  <ResponseColumn
-                    key={p.id}
-                    persona={p}
-                    responses={allResponses}
-                    isLoading={isAsking}
-                  />
+                  <ResponseColumn key={p.id} persona={p} responses={allResponses} isLoading={isAsking} />
                 ))}
               </div>
 
               {/* Question Input */}
-              {questionsAsked.length === 0 && (
-                <button
-                  onClick={() => setQuestion(DEFAULT_QUESTION)}
-                  className="mb-3 text-sm text-accent hover:text-accent/80 transition-colors underline underline-offset-2 block"
-                >
-                  השתמש בשאלת ברירת המחדל: "{DEFAULT_QUESTION}"
-                </button>
-              )}
               <div className="flex gap-3">
                 <Input
                   value={question}
