@@ -106,9 +106,17 @@ function BlockItem({ block, index, onDelete, onRenameTitle }) {
           </div>
 
           {/* Content preview */}
-          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 pr-4">
-            {block.content}
-          </p>
+          {block.imageUrl ? (
+            <img src={block.imageUrl} alt={block.title} className="w-full rounded-md object-cover max-h-36 mt-1" />
+          ) : block.pdfUrl ? (
+            <a href={block.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-accent underline pr-4 block mt-1">
+              פתח PDF בחלון חדש
+            </a>
+          ) : (
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 pr-4">
+              {block.content}
+            </p>
+          )}
         </div>
       )}
     </Draggable>
@@ -185,15 +193,44 @@ export default function DocumentWorkspacePanel({ latestAnswer, personaName }) {
   };
 
   const handleUploadFile = (file) => {
-    const allowed = /\.(txt|md|docx)$/i.test(file.name);
+    const allowed = /\.(txt|md|docx|pdf|jpg|jpeg|png|webp)$/i.test(file.name);
     if (!allowed) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target.result;
+    const isImage = /\.(jpg|jpeg|png|webp)$/i.test(file.name);
+    const isPdf = /\.pdf$/i.test(file.name);
+
+    if (isImage) {
+      const url = URL.createObjectURL(file);
       const block = {
         id: `block-${Date.now()}`,
         title: file.name,
-        content: typeof content === "string" ? content : "[תוכן בינארי]",
+        content: "",
+        imageUrl: url,
+        createdAt: new Date().toISOString(),
+        readOnly: true,
+      };
+      setBlocks([block, ...blocks]);
+      return;
+    }
+
+    if (isPdf) {
+      const block = {
+        id: `block-${Date.now()}`,
+        title: file.name,
+        content: "[קובץ PDF — ניתן לצפות בו בלבד]",
+        pdfUrl: URL.createObjectURL(file),
+        createdAt: new Date().toISOString(),
+        readOnly: true,
+      };
+      setBlocks([block, ...blocks]);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const block = {
+        id: `block-${Date.now()}`,
+        title: file.name,
+        content: e.target.result || "",
         createdAt: new Date().toISOString(),
         readOnly: true,
       };
@@ -301,9 +338,9 @@ export default function DocumentWorkspacePanel({ latestAnswer, personaName }) {
           }`}
         >
           <Paperclip size={12} className="inline ml-1" />
-          גרור קובץ .txt / .md / .docx
+          גרור קובץ .txt / .md / .docx / .pdf / תמונה
         </div>
-        <input ref={uploadRef} type="file" accept=".txt,.md,.docx" className="hidden" onChange={(e) => { if (e.target.files[0]) handleUploadFile(e.target.files[0]); e.target.value = ""; }} />
+        <input ref={uploadRef} type="file" accept=".txt,.md,.docx,.pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => { if (e.target.files[0]) handleUploadFile(e.target.files[0]); e.target.value = ""; }} />
 
         {/* Export row */}
         <div className="flex items-center gap-2">
