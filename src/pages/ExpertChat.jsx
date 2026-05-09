@@ -371,11 +371,24 @@ export default function ExpertChat() {
             ) : (
               <>
                 {messages.map((msg, i) => {
-                  // Check if this message references a document upload
-                  const isDocMsg = msg.role === "user" && msg.content.includes("קיבלת את המסמך הבא");
-                  const prevMsg = i > 0 ? messages[i - 1] : null;
+                  // Find if the previous user message was a document analysis prompt
+                  // and pair the doc with the assistant reply that follows it
+                  let sideDoc = null;
+                  if (msg.role === "assistant") {
+                    const prevUserMsg = messages[i - 1];
+                    if (prevUserMsg?.role === "user") {
+                      const isDocUpload =
+                        prevUserMsg.content.includes("תוכן המסמך") ||
+                        prevUserMsg.content.includes("זהו שרטוט") ||
+                        prevUserMsg.content.includes("לניתוח");
+                      if (isDocUpload) {
+                        // Find the most recently uploaded document before this message
+                        sideDoc = documents[documents.length - 1] || null;
+                      }
+                    }
+                  }
                   return (
-                    <ChatMessage key={msg.id} message={msg} personaName={persona.name} />
+                    <ChatMessage key={msg.id} message={msg} personaName={persona.name} sideDoc={sideDoc} />
                   );
                 })}
                 {isExtracting && (
