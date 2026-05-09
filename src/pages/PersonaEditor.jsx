@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import Breadcrumbs from "../components/Breadcrumbs";
 import SaveIndicator from "../components/SaveIndicator";
-import BusinessCardGenerator from "../components/BusinessCardGenerator";
 import { debounce } from "lodash";
 
 const FIELDS = [
@@ -76,10 +75,6 @@ export default function PersonaEditor() {
       saveTimerRef.current = setTimeout(() => setShowSaved(false), 2000);
     },
   });
-
-  const handleCardSave = (cardHTML) => {
-    updateMutation.mutate({ businessCard: cardHTML });
-  };
 
   const debouncedSave = useCallback(
     debounce((data) => {
@@ -183,13 +178,6 @@ export default function PersonaEditor() {
                 >
                   התחל שיחה עם {form.name || "המומחה"}
                 </Button>
-                <div className="mt-4">
-                  <BusinessCardGenerator
-                    persona={form}
-                    onSave={handleCardSave}
-                    existingCard={form.businessCard}
-                  />
-                </div>
               </>
             )}
           </div>
