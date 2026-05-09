@@ -1,3 +1,4 @@
+import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
@@ -17,15 +18,34 @@ function DocCard({ doc }) {
   );
 }
 
-// Styled markdown components for rich, structured assistant output
+// Context to track whether we're inside an ordered list
+const ListTypeContext = createContext(false);
+
+function ListItem({ children }) {
+  const isOrdered = useContext(ListTypeContext);
+  if (isOrdered) {
+    return (
+      <li className="text-sm leading-relaxed text-foreground pr-1 marker:text-accent marker:font-bold">
+        {children}
+      </li>
+    );
+  }
+  return (
+    <li className="text-sm leading-relaxed text-foreground flex gap-2 items-baseline list-none">
+      <span className="text-accent flex-shrink-0 text-[9px] mt-0.5">◆</span>
+      <span className="flex-1">{children}</span>
+    </li>
+  );
+}
+
 const markdownComponents = {
   h1: ({ children }) => (
-    <h1 className="text-base font-bold text-foreground mt-4 mb-2 pb-1.5 border-b border-border/50 font-frank first:mt-0">
+    <h1 className="text-base font-bold text-foreground mt-4 mb-2 pb-1.5 border-b-2 border-accent/40 font-frank first:mt-0">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-sm font-bold text-foreground mt-3 mb-1.5 pb-1 border-b border-border/30 font-frank first:mt-0">
+    <h2 className="text-sm font-bold text-foreground mt-3 mb-1.5 pb-1 border-b border-border/50 font-frank first:mt-0">
       {children}
     </h2>
   ),
@@ -40,21 +60,20 @@ const markdownComponents = {
     </p>
   ),
   ul: ({ children }) => (
-    <ul className="my-2 space-y-1 pr-4">
-      {children}
-    </ul>
+    <ListTypeContext.Provider value={false}>
+      <ul className="my-2 space-y-1.5">
+        {children}
+      </ul>
+    </ListTypeContext.Provider>
   ),
   ol: ({ children }) => (
-    <ol className="my-2 space-y-1 pr-4 list-decimal list-inside">
-      {children}
-    </ol>
+    <ListTypeContext.Provider value={true}>
+      <ol className="my-2 space-y-1.5 list-decimal list-outside pr-5 marker:text-accent marker:font-bold marker:text-sm">
+        {children}
+      </ol>
+    </ListTypeContext.Provider>
   ),
-  li: ({ children }) => (
-    <li className="text-sm leading-relaxed text-foreground flex gap-2 items-start">
-      <span className="text-accent mt-1 flex-shrink-0 text-xs">◆</span>
-      <span>{children}</span>
-    </li>
-  ),
+  li: ListItem,
   strong: ({ children }) => (
     <strong className="font-bold text-foreground">{children}</strong>
   ),
@@ -72,7 +91,7 @@ const markdownComponents = {
       </pre>
     ),
   blockquote: ({ children }) => (
-    <blockquote className="border-r-2 border-accent/60 pr-3 my-2 text-muted-foreground italic text-sm">
+    <blockquote className="border-r-2 border-accent/60 pr-3 my-2 text-muted-foreground italic text-sm bg-accent/5 py-1 rounded-sm">
       {children}
     </blockquote>
   ),
@@ -101,22 +120,20 @@ export default function ChatMessage({ message, personaName, sideDoc }) {
         className={`max-w-[78%] rounded-xl px-4 py-3 ${
           isUser
             ? "bg-primary text-primary-foreground rounded-br-sm shadow-sm"
-            : "bg-card border border-border text-foreground rounded-bl-sm shadow-sm"
+            : "bg-card border-2 border-border/60 text-foreground rounded-bl-sm shadow-sm"
         }`}
       >
         {!isUser && (
-          <p className="text-[10px] font-bold text-accent mb-2 font-frank uppercase tracking-widest">
+          <p className="text-[10px] font-bold text-accent mb-2 font-frank uppercase tracking-widest border-b border-border/20 pb-1.5">
             {personaName}
           </p>
         )}
         {isUser ? (
           <p className="text-sm leading-relaxed">{message.content}</p>
         ) : (
-          <div className="prose-custom">
-            <ReactMarkdown components={markdownComponents}>
-              {message.content}
-            </ReactMarkdown>
-          </div>
+          <ReactMarkdown components={markdownComponents}>
+            {message.content}
+          </ReactMarkdown>
         )}
       </div>
 
