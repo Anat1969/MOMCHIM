@@ -215,8 +215,12 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
   const [showMigrationNotice, setShowMigrationNotice] = useState(false);
   const uploadRef = useRef(null);
 
+  const prevConvKey = useRef(null);
+
   useEffect(() => {
-    if (!convKey) { setBlocksState([]); return; }
+    if (!convKey) return; // wait until we have a real session id
+    if (convKey === prevConvKey.current) return; // already loaded this key
+    prevConvKey.current = convKey;
     const all = readAllPanelData();
     if (all._migrated) setShowMigrationNotice(true);
     setBlocksState(all[convKey]?.blocks || []);
