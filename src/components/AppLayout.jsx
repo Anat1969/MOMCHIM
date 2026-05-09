@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function AppLayout() {
   const location = useLocation();
@@ -46,6 +47,7 @@ export default function AppLayout() {
             >
               עימות
             </Link>
+            <ThemeSwitcher />
           </nav>
         </div>
       </header>
