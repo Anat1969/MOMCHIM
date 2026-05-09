@@ -9,6 +9,7 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import ChatMessage from "../components/ChatMessage";
 import EmptyState from "../components/EmptyState";
 import FileUploadZone from "../components/FileUploadZone";
+import DocumentWorkspacePanel from "../components/DocumentWorkspacePanel";
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -311,6 +312,12 @@ export default function ExpertChat() {
         style={{ height: "calc(100vh - 200px)" }}
         onPaste={handlePaste}
       >
+        {/* Document Workspace Panel (RTL: appears on left visually) */}
+        <DocumentWorkspacePanel
+          latestAnswer={[...messages].reverse().find((m) => m.role === "assistant")?.content || null}
+          personaName={persona?.name}
+        />
+
         {/* Sidebar */}
         <PersonaSidebar
           persona={persona}
