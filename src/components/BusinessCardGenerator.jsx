@@ -3,166 +3,212 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogFooter,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import html2canvas from "html2canvas";
 
-const DOMAIN_STYLES = {
+const DOMAIN_DESIGNS = {
+  // Urban & Social
   urban: {
-    colors: { bg: "#2a2a2a", text: "#f5f5f5", accent: "#3a3a3a", highlight: "#ffffff" },
-    pattern: "concrete",
-    typography: "serif",
-    layout: "asymmetric",
+    gradient: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
+    accentColor: "#e8e8e8",
+    secondaryColor: "#666666",
+    patternType: "concrete",
+    borderColor: "#4a4a4a",
+    textColor: "#ffffff",
   },
   social: {
-    colors: { bg: "#1a1a1a", text: "#ffffff", accent: "#444444", highlight: "#ffff00" },
-    pattern: "concrete",
-    typography: "serif",
-    layout: "asymmetric",
+    gradient: "linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)",
+    accentColor: "#ffff00",
+    secondaryColor: "#666666",
+    patternType: "concrete",
+    borderColor: "#333333",
+    textColor: "#ffffff",
   },
+
+  // Engineering & Tech
   engineering: {
-    colors: { bg: "#f5f5f5", text: "#333333", accent: "#a4ac86", highlight: "#32cd32" },
-    pattern: "grid",
-    typography: "monospace",
-    layout: "precise",
+    gradient: "linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)",
+    accentColor: "#32cd32",
+    secondaryColor: "#666666",
+    patternType: "grid",
+    borderColor: "#cccccc",
+    textColor: "#1a1a1a",
   },
   sustainability: {
-    colors: { bg: "#fafaf8", text: "#2a2a2a", accent: "#8b8b7a", highlight: "#7cb342" },
-    pattern: "grid",
-    typography: "monospace",
-    layout: "precise",
-  },
-  history: {
-    colors: { bg: "#e8dcc8", text: "#3e2723", accent: "#d4a574", highlight: "#8b6f47" },
-    pattern: "parchment",
-    typography: "serif",
-    layout: "centered",
-  },
-  philosophy: {
-    colors: { bg: "#ebe4d9", text: "#4a4a4a", accent: "#c9a876", highlight: "#8b7355" },
-    pattern: "parchment",
-    typography: "serif",
-    layout: "centered",
-  },
-  art: {
-    colors: { bg: "#e5ddd0", text: "#2a2a2a", accent: "#d4a574", highlight: "#a0826d" },
-    pattern: "parchment",
-    typography: "serif",
-    layout: "centered",
-  },
-  legal: {
-    colors: { bg: "#ffffff", text: "#000033", accent: "#d4af37", highlight: "#000033" },
-    pattern: "rules",
-    typography: "serif",
-    layout: "formal",
-  },
-  strategic: {
-    colors: { bg: "#0a1428", text: "#ffffff", accent: "#d4af37", highlight: "#d4af37" },
-    pattern: "rules",
-    typography: "serif",
-    layout: "formal",
+    gradient: "linear-gradient(135deg, #fafaf8 0%, #f0f0ed 100%)",
+    accentColor: "#7cb342",
+    secondaryColor: "#8b8b7a",
+    patternType: "grid",
+    borderColor: "#ddd",
+    textColor: "#2a2a2a",
   },
   tech: {
-    colors: { bg: "#0a0a0a", text: "#00ff00", accent: "#1a1a1a", highlight: "#ff00ff" },
-    pattern: "grid",
-    typography: "monospace",
-    layout: "asymmetric",
+    gradient: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
+    accentColor: "#00ff88",
+    secondaryColor: "#ff00ff",
+    patternType: "grid",
+    borderColor: "#333333",
+    textColor: "#00ff88",
   },
-  digital: {
-    colors: { bg: "#000000", text: "#00ff88", accent: "#111111", highlight: "#ffff00" },
-    pattern: "grid",
-    typography: "monospace",
-    layout: "asymmetric",
+
+  // History & Art
+  history: {
+    gradient: "linear-gradient(135deg, #e8dcc8 0%, #d4c5b0 100%)",
+    accentColor: "#8b6f47",
+    secondaryColor: "#c9a876",
+    patternType: "parchment",
+    borderColor: "#c9a876",
+    textColor: "#3e2723",
   },
+  philosophy: {
+    gradient: "linear-gradient(135deg, #ebe4d9 0%, #ddd4c9 100%)",
+    accentColor: "#8b7355",
+    secondaryColor: "#c9a876",
+    patternType: "parchment",
+    borderColor: "#c9a876",
+    textColor: "#4a4a4a",
+  },
+  art: {
+    gradient: "linear-gradient(135deg, #e5ddd0 0%, #d9d1c4 100%)",
+    accentColor: "#a0826d",
+    secondaryColor: "#d4a574",
+    patternType: "parchment",
+    borderColor: "#d4a574",
+    textColor: "#2a2a2a",
+  },
+
+  // Legal & Strategic
+  legal: {
+    gradient: "linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%)",
+    accentColor: "#d4af37",
+    secondaryColor: "#cccccc",
+    patternType: "rules",
+    borderColor: "#d4af37",
+    textColor: "#000033",
+  },
+  strategic: {
+    gradient: "linear-gradient(135deg, #0a1428 0%, #0f1f3d 100%)",
+    accentColor: "#d4af37",
+    secondaryColor: "#666666",
+    patternType: "rules",
+    borderColor: "#d4af37",
+    textColor: "#ffffff",
+  },
+
+  // Medical & Science
   medical: {
-    colors: { bg: "#ffffff", text: "#003366", accent: "#e8f4f8", highlight: "#003366" },
-    pattern: "whitespace",
-    typography: "sans",
-    layout: "precise",
+    gradient: "linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%)",
+    accentColor: "#0066cc",
+    secondaryColor: "#e8f4f8",
+    patternType: "grid",
+    borderColor: "#ccddee",
+    textColor: "#003366",
   },
   science: {
-    colors: { bg: "#f8f9fa", text: "#003d7a", accent: "#dceef5", highlight: "#003d7a" },
-    pattern: "grid",
-    typography: "sans",
-    layout: "precise",
+    gradient: "linear-gradient(135deg, #f8f9fa 0%, #e8eef5 100%)",
+    accentColor: "#003d7a",
+    secondaryColor: "#dceef5",
+    patternType: "grid",
+    borderColor: "#b3d9ff",
+    textColor: "#003d7a",
   },
 };
 
-function getDomainStyle(domain, tone) {
+function getDomainStyle(domain) {
   const domainLower = domain.toLowerCase();
+  const keywords = Object.keys(DOMAIN_DESIGNS);
 
-  // Try to match domain keywords
-  for (const [key, style] of Object.entries(DOMAIN_STYLES)) {
-    if (domainLower.includes(key)) {
-      return style;
+  for (const keyword of keywords) {
+    if (domainLower.includes(keyword)) {
+      return DOMAIN_DESIGNS[keyword];
     }
   }
 
-  // Derive from tone if no match
-  if (tone) {
-    const toneLower = tone.toLowerCase();
-    if (toneLower.includes("חם") || toneLower.includes("טופל")) {
-      return DOMAIN_STYLES.philosophy; // Warm tones
-    }
-    if (toneLower.includes("ניתוח") || toneLower.includes("מדויק")) {
-      return DOMAIN_STYLES.engineering; // Analytical
-    }
-    if (toneLower.includes("פרובוק")) {
-      return DOMAIN_STYLES.urban; // Provocative
-    }
+  // Default based on common patterns
+  if (
+    domainLower.includes("טכנולוג") ||
+    domainLower.includes("תוכנ") ||
+    domainLower.includes("דיגיטל")
+  ) {
+    return DOMAIN_DESIGNS.tech;
+  }
+  if (domainLower.includes("משפט") || domainLower.includes("אחריות")) {
+    return DOMAIN_DESIGNS.legal;
+  }
+  if (
+    domainLower.includes("רפוא") ||
+    domainLower.includes("בריאות") ||
+    domainLower.includes("רפא")
+  ) {
+    return DOMAIN_DESIGNS.medical;
   }
 
-  return DOMAIN_STYLES.tech; // Default
+  return DOMAIN_DESIGNS.tech; // Default
 }
 
-function generateDecorativeElement(style, domain) {
-  const { pattern } = style;
+function generateSVGPattern(patternType, accentColor, bgColor) {
+  const patterns = {
+    concrete: `
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" opacity="0.1">
+        <defs>
+          <filter id="noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" />
+          </filter>
+        </defs>
+        <rect width="100%" height="100%" fill="${bgColor}" filter="url(#noise)" />
+      </svg>
+    `,
+    grid: `
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" opacity="0.08">
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="${accentColor}" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+      </svg>
+    `,
+    parchment: `
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" opacity="0.15">
+        <defs>
+          <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+            <stop offset="0%" style="stop-color:${bgColor};stop-opacity:0" />
+            <stop offset="100%" style="stop-color:${accentColor};stop-opacity:0.3" />
+          </radialGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#vignette)" />
+      </svg>
+    `,
+    rules: `
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" opacity="0.2">
+        <line x1="0" y1="0" x2="100%" y2="0" stroke="${accentColor}" stroke-width="2"/>
+        <line x1="0" y1="100%" x2="100%" y2="100%" stroke="${accentColor}" stroke-width="2"/>
+      </svg>
+    `,
+  };
 
-  if (pattern === "concrete") {
-    return `<div style="position: absolute; bottom: 0; left: 0; width: 200px; height: 200px; background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 20px 20px; opacity: 0.3;"></div>`;
-  }
-
-  if (pattern === "grid") {
-    return `<div style="position: absolute; top: 0; right: 0; width: 150px; height: 150px; border: 2px solid ${style.colors.highlight}; opacity: 0.2;"></div>`;
-  }
-
-  if (pattern === "parchment") {
-    return `<div style="position: absolute; bottom: 0; right: 0; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, ${style.colors.highlight}15 0%, transparent 70%);"></div>`;
-  }
-
-  if (pattern === "rules") {
-    return `<div style="position: absolute; top: 20px; right: 0; height: 2px; width: 150px; background: linear-gradient(to left, ${style.colors.highlight}, transparent);"></div>`;
-  }
-
-  if (pattern === "whitespace") {
-    return `<div style="position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: ${style.colors.accent};"></div>`;
-  }
-
-  return "";
+  return patterns[patternType] || patterns.grid;
 }
 
 function generateBusinessCardHTML(persona) {
-  const style = getDomainStyle(persona.domain || "", persona.tone || "");
-  const { colors, typography } = style;
-
-  const fontFamily = typography === "serif"
-    ? "'Georgia', serif"
-    : typography === "monospace"
-    ? "'Courier New', monospace"
-    : "'Helvetica', sans-serif";
-
-  const decorative = generateDecorativeElement(style, persona.domain);
+  const style = getDomainStyle(persona.domain || "");
+  const pattern = generateSVGPattern(
+    style.patternType,
+    style.accentColor,
+    style.gradient
+  );
 
   return `
     <div style="
       width: 1748px;
       height: 1004px;
-      background-color: ${colors.bg};
-      color: ${colors.text};
-      font-family: ${fontFamily};
+      background: ${style.gradient};
+      color: ${style.textColor};
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
       direction: rtl;
       position: relative;
       overflow: hidden;
@@ -171,48 +217,112 @@ function generateBusinessCardHTML(persona) {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     ">
-      ${decorative}
+      <!-- Pattern Background -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      ">
+        ${pattern}
+      </div>
 
-      <div style="position: relative; z-index: 1;">
+      <!-- Accent Line -->
+      <div style="
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 8px;
+        height: 100%;
+        background: ${style.accentColor};
+      "></div>
+
+      <!-- Main Content -->
+      <div style="position: relative; z-index: 2;">
         <div style="
-          font-size: 72px;
-          font-weight: bold;
-          line-height: 1.2;
-          margin-bottom: 20px;
+          font-size: 68px;
+          font-weight: 700;
+          line-height: 1.1;
+          margin-bottom: 16px;
           letter-spacing: -1px;
+          color: ${style.textColor};
         ">
           ${persona.name || ""}
         </div>
 
         <div style="
-          font-size: 28px;
-          color: ${colors.accent};
-          margin-bottom: 40px;
-          opacity: 0.8;
-          font-weight: 500;
+          font-size: 24px;
+          color: ${style.accentColor};
+          margin-bottom: 32px;
+          opacity: 0.9;
+          font-weight: 600;
+          letter-spacing: 1px;
         ">
           ${persona.domain || ""}
         </div>
       </div>
 
-      <div style="position: relative; z-index: 1;">
+      <!-- Footer Section -->
+      <div style="position: relative; z-index: 2;">
         <div style="
-          font-size: 20px;
-          font-style: italic;
-          opacity: 0.7;
-          line-height: 1.6;
-          max-width: 800px;
-          text-align: right;
+          border-top: 2px solid ${style.accentColor};
+          padding-top: 20px;
+          margin-top: 20px;
         ">
-          "${persona.unique_expression || ""}"
+          <div style="
+            font-size: 18px;
+            font-style: italic;
+            opacity: 0.85;
+            line-height: 1.6;
+            max-width: 900px;
+            text-align: right;
+            color: ${style.secondaryColor};
+          ">
+            "${persona.unique_expression || ""}"
+          </div>
         </div>
+
+        <!-- Strength Badge -->
+        ${
+          persona.strength
+            ? `
+          <div style="
+            margin-top: 16px;
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: ${style.accentColor}22;
+            color: ${style.accentColor};
+            font-size: 14px;
+            border-radius: 4px;
+            font-weight: 600;
+          ">
+            ${persona.strength}
+          </div>
+        `
+            : ""
+        }
       </div>
+
+      <!-- Corner Decoration -->
+      <div style="
+        position: absolute;
+        bottom: 40px;
+        left: 40px;
+        width: 120px;
+        height: 120px;
+        border: 3px solid ${style.accentColor};
+        opacity: 0.15;
+        transform: rotate(45deg);
+      "></div>
     </div>
   `;
 }
 
-export default function BusinessCardGenerator({ persona, onSave, onClose, existingCard = null }) {
+export default function BusinessCardGenerator({ persona, onSave, existingCard = null }) {
   const [isOpen, setIsOpen] = useState(false);
   const [cardHTML, setCardHTML] = useState(existingCard || "");
   const [showPreview, setShowPreview] = useState(false);
@@ -247,6 +357,7 @@ export default function BusinessCardGenerator({ persona, onSave, onClose, existi
           scale: 2,
           useCORS: true,
           backgroundColor: null,
+          logging: false,
         });
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
@@ -259,19 +370,26 @@ export default function BusinessCardGenerator({ persona, onSave, onClose, existi
   };
 
   const handleEditSave = () => {
-    const updatedHTML = cardHTML
-      .replace(
-        /(<div style="[^"]*font-size: 72px[^"]*">\s*).*?(\s*<\/div>)/,
-        `$1${editedText.name}$2`
-      )
-      .replace(
-        /(<div style="[^"]*font-size: 28px[^"]*">\s*).*?(\s*<\/div>)/,
-        `$1${editedText.domain}$2`
-      )
-      .replace(
-        /"\[^"]*"/,
-        `"${editedText.expression}"`
-      );
+    let updatedHTML = cardHTML;
+
+    // Replace name
+    updatedHTML = updatedHTML.replace(
+      /(<div style="[^"]*font-size: 68px[^"]*">\s*).*?(\s*<\/div>)/s,
+      `$1${editedText.name}$2`
+    );
+
+    // Replace domain
+    updatedHTML = updatedHTML.replace(
+      /(<div style="[^"]*font-size: 24px[^"]*">\s*).*?(\s*<\/div>)/s,
+      `$1${editedText.domain}$2`
+    );
+
+    // Replace expression
+    updatedHTML = updatedHTML.replace(
+      /"[^"]*"/,
+      `"${editedText.expression}"`
+    );
+
     setCardHTML(updatedHTML);
     setIsEditing(false);
   };
@@ -294,55 +412,61 @@ export default function BusinessCardGenerator({ persona, onSave, onClose, existi
         {existingCard ? "ערוך כרטיס" : "צור כרטיס ביקור"}
       </button>
 
-      <Dialog open={isOpen || showPreview} onOpenChange={(open) => {
-        if (!open) {
-          setIsOpen(false);
-          setShowPreview(false);
-        }
-      }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog
+        open={isOpen || showPreview}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsOpen(false);
+            setShowPreview(false);
+            setIsEditing(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
           {!showPreview ? (
             <>
-              <DialogHeader>
+              <DialogHeader className="p-6 pb-4">
                 <DialogTitle>צור כרטיס ביקור</DialogTitle>
               </DialogHeader>
-              <div className="py-6">
-                <p className="text-sm text-muted-foreground mb-4">
-                  לחץ להמשך וننו ניצור כרטיס ביקור עם עיצוב ייחודי לפי תחום ההתמחות של {persona.name}
+              <div className="px-6 py-4">
+                <p className="text-sm text-muted-foreground mb-6">
+                  אנו נוצור כרטיס ביקור עם עיצוב מקצועי המותאם לתחום
+                  {persona.domain && <span> "{persona.domain}"</span>}
                 </p>
                 <Button
                   onClick={handleGenerate}
-                  className="w-full bg-primary hover:bg-primary/90"
+                  className="w-full bg-primary hover:bg-primary/90 text-lg h-12"
                 >
-                  צור כרטיס ביקור
+                  יצור כרטיס ביקור
                 </Button>
               </div>
             </>
           ) : (
             <>
-              <DialogHeader>
+              <DialogHeader className="p-6 pb-4">
                 <DialogTitle>כרטיס הביקור של {persona.name}</DialogTitle>
               </DialogHeader>
-              <div className="py-6 flex justify-center">
+
+              <div className="px-6 pb-6 flex justify-center bg-gray-50 rounded-lg mx-4">
                 <div
                   ref={cardRef}
                   dangerouslySetInnerHTML={{ __html: cardHTML }}
                   style={{
                     maxWidth: "100%",
-                    margin: "0 auto",
-                    transform: "scale(0.5)",
-                    transformOrigin: "top center",
+                    margin: "20px 0",
                   }}
                 />
               </div>
 
               {isEditing && (
-                <div className="space-y-4 mb-6 p-4 bg-secondary/50 rounded-lg">
+                <div className="space-y-4 mb-6 p-4 bg-secondary/50 rounded-lg mx-6">
                   <div>
                     <label className="text-sm font-medium">שם</label>
                     <Input
                       value={editedText.name}
-                      onChange={(e) => setEditedText({ ...editedText, name: e.target.value })}
+                      onChange={(e) =>
+                        setEditedText({ ...editedText, name: e.target.value })
+                      }
                       className="mt-1"
                     />
                   </div>
@@ -350,7 +474,12 @@ export default function BusinessCardGenerator({ persona, onSave, onClose, existi
                     <label className="text-sm font-medium">תחום</label>
                     <Input
                       value={editedText.domain}
-                      onChange={(e) => setEditedText({ ...editedText, domain: e.target.value })}
+                      onChange={(e) =>
+                        setEditedText({
+                          ...editedText,
+                          domain: e.target.value,
+                        })
+                      }
                       className="mt-1"
                     />
                   </div>
@@ -358,30 +487,29 @@ export default function BusinessCardGenerator({ persona, onSave, onClose, existi
                     <label className="text-sm font-medium">ביטוי ייחודי</label>
                     <Input
                       value={editedText.expression}
-                      onChange={(e) => setEditedText({ ...editedText, expression: e.target.value })}
+                      onChange={(e) =>
+                        setEditedText({
+                          ...editedText,
+                          expression: e.target.value,
+                        })
+                      }
                       className="mt-1"
                     />
                   </div>
                 </div>
               )}
 
-              <DialogFooter className="flex flex-row-reverse gap-3 justify-start">
+              <DialogFooter className="flex flex-row-reverse gap-2 justify-start p-6 pt-4 border-t">
                 <Button
                   onClick={handleSave}
                   className="bg-primary hover:bg-primary/90"
                 >
                   שמור כרטיס
                 </Button>
-                <Button
-                  onClick={handleRegenerate}
-                  variant="outline"
-                >
+                <Button onClick={handleRegenerate} variant="outline">
                   שנה סגנון
                 </Button>
-                <Button
-                  onClick={handleExport}
-                  variant="outline"
-                >
+                <Button onClick={handleExport} variant="outline">
                   הורד כ-PNG
                 </Button>
                 <Button
@@ -400,6 +528,7 @@ export default function BusinessCardGenerator({ persona, onSave, onClose, existi
                   onClick={() => {
                     setShowPreview(false);
                     setIsOpen(false);
+                    setIsEditing(false);
                   }}
                   variant="ghost"
                 >
