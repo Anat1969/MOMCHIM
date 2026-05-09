@@ -1,0 +1,52 @@
+{
+  "name": "Persona",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "\u05e9\u05dd \u05d4\u05de\u05d5\u05de\u05d7\u05d4"
+    },
+    "domain": {
+      "type": "string",
+      "description": "\u05ea\u05d7\u05d5\u05dd \u05dc\u05d9\u05d1\u05d4"
+    },
+    "age_background": {
+      "type": "string",
+      "description": "\u05d2\u05d9\u05dc \u05d5\u05e8\u05e7\u05e2"
+    },
+    "tone": {
+      "type": "string",
+      "description": "\u05d8\u05d5\u05df - 3 \u05de\u05d9\u05dc\u05d9\u05dd"
+    },
+    "strength": {
+      "type": "string",
+      "description": "\u05d7\u05d5\u05d6\u05e7\u05d4"
+    },
+    "blind_spot": {
+      "type": "string",
+      "description": "\u05e2\u05d9\u05d5\u05d5\u05e8 \u05e1\u05e4\u05d5\u05d8"
+    },
+    "unique_expression": {
+      "type": "string",
+      "description": "\u05d1\u05d9\u05d8\u05d5\u05d9 \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9"
+    },
+    "wont_do": {
+      "type": "string",
+      "description": "\u05de\u05d4 \u05d4\u05d5\u05d0 \u05dc\u05d0 \u05d9\u05e2\u05e9\u05d4"
+    },
+    "system_prompt": {
+      "type": "string",
+      "description": "\u05e4\u05e8\u05d5\u05de\u05e4\u05d8 \u05de\u05e2\u05e8\u05db\u05ea \u05e9\u05e0\u05d5\u05e6\u05e8 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea"
+    },
+    "last_active": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4"
+    }
+  },
+  "required": [
+    "name",
+    "domain",
+    "tone"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "\u05de\u05d6\u05d4\u05d4 \u05d4\u05e9\u05d9\u05d7\u05d4"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "user",
+        "assistant"
+      ],
+      "description": "\u05ea\u05e4\u05e7\u05d9\u05d3 \u05d4\u05e9\u05d5\u05dc\u05d7"
+    },
+    "content": {
+      "type": "string",
+      "description": "\u05ea\u05d5\u05db\u05df \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4"
+    }
+  },
+  "required": [
+    "session_id",
+    "role",
+    "content"
+  ]
+}
