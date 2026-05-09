@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef } from "react";
+import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -288,26 +289,14 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
 
   useImperativeHandle(ref, () => ({ addUploadedFileBlock }), [addUploadedFileBlock]);
 
-  const handleUploadFile = (file) => {
+  const handleUploadFile = async (file) => {
     const allowed = /\.(txt|md|docx|pdf|jpg|jpeg|png|webp)$/i.test(file.name);
     if (!allowed) return;
-    const isImage = /\.(jpg|jpeg|png|webp)$/i.test(file.name);
-    const isPdf = /\.pdf$/i.test(file.name);
     const uniqueName = deduplicateFileName(file.name, blocks);
 
-    if (isImage) {
-      setBlocks([{ id: `block-${Date.now()}`, title: uniqueName, content: "", imageUrl: URL.createObjectURL(file), createdAt: new Date().toISOString(), readOnly: true }, ...blocks]);
-      return;
-    }
-    if (isPdf) {
-      setBlocks([{ id: `block-${Date.now()}`, title: uniqueName, content: "[PDF]", pdfUrl: URL.createObjectURL(file), createdAt: new Date().toISOString(), readOnly: true }, ...blocks]);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setBlocks([{ id: `block-${Date.now()}`, title: uniqueName, content: e.target.result || "", createdAt: new Date().toISOString(), readOnly: true }, ...blocks]);
-    };
-    reader.readAsText(file);
+    // Upload to server first to get a persistent URL
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    addUploadedFileBlock({ name: uniqueName, type: file.type }, file_url);
   };
 
   const onDropFile = (e) => {
