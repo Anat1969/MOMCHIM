@@ -3,7 +3,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, ChevronLeft, Copy, Check, GripVertical, Pencil,
-  Paperclip, Download, CopyPlus, X, FileText, FileCode, FileType
+  Paperclip, Download, CopyPlus, X, FileText
 } from "lucide-react";
 
 const STORAGE_KEY = "expert-panel-state";
@@ -67,13 +67,6 @@ function deduplicateFileName(name, existingBlocks) {
   const base = name.slice(0, name.length - ext.length);
   return `${base}-${Date.now()}${ext}`;
 }
-
-// Export format config
-const EXPORT_FORMATS = [
-  { id: "md", label: "Markdown", ext: ".md", icon: FileCode, desc: "עם עיצוב" },
-  { id: "txt", label: "Plain Text", ext: ".txt", icon: FileType, desc: "טקסט נקי" },
-  { id: "html", label: "HTML", ext: ".html", icon: FileText, desc: "לדפדפן" },
-];
 
 // ─── BlockItem ────────────────────────────────────────────────────────────────
 
@@ -216,7 +209,6 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
 
   const [blocks, setBlocksState] = useState(() => (convKey ? loadConvBlocks(convKey) : []));
   const [collapsed, setCollapsedState] = useState(loadCollapsed);
-  const [exportFormat, setExportFormat] = useState("md");
   const [allCopied, setAllCopied] = useState(false);
   const [draggingOver, setDraggingOver] = useState(false);
   const [showMigrationNotice, setShowMigrationNotice] = useState(false);
@@ -267,21 +259,13 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
   };
 
   const exportDoc = () => {
-    const fmt = EXPORT_FORMATS.find(f => f.id === exportFormat);
-    let text;
-    if (exportFormat === "html") {
-      text = `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>מסמך מומחה</title></head><body style="font-family:sans-serif;max-width:800px;margin:40px auto;padding:20px">` +
-        blocks.map((b) => `<h2>${b.title}</h2><div>${b.content.replace(/\n/g, "<br>")}</div><hr>`).join("\n") +
-        `</body></html>`;
-    } else {
-      text = blocks.map((b) => `# ${b.title}\n\n${b.content}`).join("\n\n---\n\n");
-    }
+    const text = blocks.map((b) => `# ${b.title}\n\n${b.content}`).join("\n\n---\n\n");
     const date = new Date().toISOString().slice(0, 10);
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `expert-${date}${fmt.ext}`;
+    a.download = `expert-${date}.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -478,39 +462,14 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
           onChange={(e) => { if (e.target.files[0]) handleUploadFile(e.target.files[0]); e.target.value = ""; }}
         />
 
-        {/* Export format — 3-way toggle */}
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">פורמט ייצוא</p>
-          <div className="grid grid-cols-3 gap-1 rounded-lg border border-border/50 p-0.5 bg-secondary/20">
-            {EXPORT_FORMATS.map((fmt) => {
-              const Icon = fmt.icon;
-              return (
-                <button
-                  key={fmt.id}
-                  onClick={() => setExportFormat(fmt.id)}
-                  title={fmt.desc}
-                  className={`flex flex-col items-center gap-0.5 py-1.5 rounded text-center transition-all ${
-                    exportFormat === fmt.id
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-                  }`}
-                >
-                  <Icon size={12} />
-                  <span className="text-[10px] font-medium">{fmt.label.split(" ")[0]}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={exportDoc}
-            disabled={blocks.length === 0}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded border border-border/50 text-xs text-muted-foreground hover:text-foreground hover:border-border disabled:opacity-40 transition-colors bg-card"
-          >
-            <Download size={12} />
-            יצא {EXPORT_FORMATS.find(f => f.id === exportFormat)?.ext}
-          </button>
-        </div>
+        <button
+          onClick={exportDoc}
+          disabled={blocks.length === 0}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded border border-border/50 text-xs text-muted-foreground hover:text-foreground hover:border-border disabled:opacity-40 transition-colors bg-card"
+        >
+          <Download size={12} />
+          יצא Markdown
+        </button>
       </div>
     </div>
   );
