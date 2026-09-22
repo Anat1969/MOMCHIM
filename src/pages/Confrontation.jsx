@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -68,7 +68,7 @@ export default function Confrontation() {
 
   const { data: personas = [] } = useQuery({
     queryKey: ["personas"],
-    queryFn: () => base44.entities.Persona.list("-updated_date"),
+    queryFn: () => api.entities.Persona.list("-updated_date"),
   });
 
   const selectedPersonas = personas.filter((p) => selectedIds.includes(p.id));
@@ -81,7 +81,7 @@ export default function Confrontation() {
 
   const handleAttachDoc = async (file) => {
     setIsUploadingDoc(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await api.integrations.Core.UploadFile({ file });
     setAttachedDoc({ file, url: file_url });
     setIsUploadingDoc(false);
   };
@@ -117,10 +117,15 @@ export default function Confrontation() {
         previousContext ? `הקשר קודם:\n${previousContext}\n\n` : ""
       }שאלה: ${currentQuestion}${docContext}\n\nענה בתור ${persona.name} בעברית. תשובה ממוקדת ותמציתית.`;
 
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        ...(attachedDoc ? { file_urls: [attachedDoc.url] } : {}),
-      });
+      let response;
+      try {
+        response = await api.integrations.Core.InvokeLLM({
+          prompt,
+          ...(attachedDoc ? { file_urls: [attachedDoc.url] } : {}),
+        });
+      } catch (e) {
+        response = `_לא התקבלה תשובה: ${e.message}_`;
+      }
 
       return { persona_id: persona.id, response, questionIndex };
     });

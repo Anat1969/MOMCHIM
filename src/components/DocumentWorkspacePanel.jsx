@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
+import { useFileUrl } from "@/hooks/use-file-url";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -72,6 +73,7 @@ function deduplicateFileName(name, existingBlocks) {
 // ─── BlockItem ────────────────────────────────────────────────────────────────
 
 function BlockItem({ block, index, onDelete, onRenameTitle }) {
+  const fileUrl = useFileUrl(block.imageUrl || block.pdfUrl || block.fileUrl);
   const [copied, setCopied] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleVal, setTitleVal] = useState(block.title);
@@ -174,19 +176,19 @@ function BlockItem({ block, index, onDelete, onRenameTitle }) {
             {/* Content preview */}
             {block.imageUrl ? (
               <img
-                src={block.imageUrl}
+                src={fileUrl || undefined}
                 alt={block.title}
                 className="w-full rounded object-cover max-h-28"
                 onError={(e) => { e.target.style.display = "none"; }}
               />
             ) : block.pdfUrl ? (
-              <a href={block.pdfUrl} target="_blank" rel="noopener noreferrer"
+              <a href={fileUrl || undefined} target="_blank" rel="noopener noreferrer"
                 className="text-[10px] text-accent underline underline-offset-2 flex items-center gap-1">
                 <FileText size={10} />
                 פתח PDF
               </a>
             ) : block.fileUrl ? (
-              <a href={block.fileUrl} target="_blank" rel="noopener noreferrer"
+              <a href={fileUrl || undefined} download={block.title} target="_blank" rel="noopener noreferrer"
                 className="text-[10px] text-accent underline underline-offset-2 flex items-center gap-1">
                 <FileText size={10} />
                 פתח קובץ
@@ -299,7 +301,7 @@ const DocumentWorkspacePanel = forwardRef(function DocumentWorkspacePanel({ late
     const uniqueName = deduplicateFileName(file.name, blocks);
 
     // Upload to server first to get a persistent URL
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await api.integrations.Core.UploadFile({ file });
     addUploadedFileBlock({ name: uniqueName, type: file.type }, file_url);
   };
 

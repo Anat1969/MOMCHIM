@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,7 +32,7 @@ function FileBubble({ fileName, fileSize }) {
 function PersonaSidebar({ persona, isOpen, onToggle, sessionId, onReReference }) {
   const { data: documents = [] } = useQuery({
     queryKey: ["documents", sessionId],
-    queryFn: () => base44.entities.UploadedDocument.filter({ session_id: sessionId }),
+    queryFn: () => api.entities.UploadedDocument.filter({ session_id: sessionId }),
     enabled: !!sessionId,
   });
 
@@ -125,32 +125,32 @@ export default function ExpertChat() {
 
   const { data: personas = [] } = useQuery({
     queryKey: ["persona", personaId],
-    queryFn: () => base44.entities.Persona.filter({ id: personaId }),
+    queryFn: () => api.entities.Persona.filter({ id: personaId }),
   });
   const persona = personas[0];
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["sessions", personaId],
-    queryFn: () => base44.entities.ChatSession.filter({ persona_id: personaId, is_active: true }),
+    queryFn: () => api.entities.ChatSession.filter({ persona_id: personaId, is_active: true }),
     enabled: !!personaId,
   });
   const sessionId = sessions[0]?.id;
 
   const { data: messages = [] } = useQuery({
     queryKey: ["messages", sessionId],
-    queryFn: () => base44.entities.Message.filter({ session_id: sessionId }, "created_date"),
+    queryFn: () => api.entities.Message.filter({ session_id: sessionId }, "created_date"),
     enabled: !!sessionId,
   });
 
   const { data: documents = [] } = useQuery({
     queryKey: ["documents", sessionId],
-    queryFn: () => base44.entities.UploadedDocument.filter({ session_id: sessionId }),
+    queryFn: () => api.entities.UploadedDocument.filter({ session_id: sessionId }),
     enabled: !!sessionId,
   });
 
   const getOrCreateSession = async () => {
     if (sessionId) return sessionId;
-    const newSession = await base44.entities.ChatSession.create({
+    const newSession = await api.entities.ChatSession.create({
       persona_id: personaId,
       title: `שיחה עם ${persona?.name}`,
       is_active: true,
@@ -164,8 +164,9 @@ export default function ExpertChat() {
     /^image\//.test(file.type) || file.type === "application/pdf";
 
   const sendMessage = async (content, fileUrl = null) => {
+    setExtractError("");
     const sid = await getOrCreateSession();
-    await base44.entities.Message.create({ session_id: sid, role: "user", content });
+    await api.entities.Message.create({ session_id: sid, role: "user", content });
     queryClient.invalidateQueries({ queryKey: ["messages", sid] });
     setIsThinking(true);
 
@@ -175,15 +176,21 @@ export default function ExpertChat() {
 
     const llmParams = {
       prompt: `${persona.system_prompt || ""}\n\nהיסטוריית שיחה:\n${history}\n\nמשתמש: ${content}\n\nענה בתור ${persona.name}:`,
-      model: fileUrl ? "gemini_3_flash" : undefined,
     };
     if (fileUrl) {
       llmParams.file_urls = [fileUrl];
     }
-    const response = await base44.integrations.Core.InvokeLLM(llmParams);
+    let response;
+    try {
+      response = await api.integrations.Core.InvokeLLM(llmParams);
+    } catch (e) {
+      setIsThinking(false);
+      setExtractError(`לא התקבלה תשובה: ${e.message}`);
+      return;
+    }
 
-    await base44.entities.Message.create({ session_id: sid, role: "assistant", content: response });
-    await base44.entities.Persona.update(personaId, { last_active: new Date().toISOString() });
+    await api.entities.Message.create({ session_id: sid, role: "assistant", content: response });
+    await api.entities.Persona.update(personaId, { last_active: new Date().toISOString() });
     setIsThinking(false);
     queryClient.invalidateQueries({ queryKey: ["messages", sid] });
     queryClient.invalidateQueries({ queryKey: ["personas"] });
@@ -207,9 +214,9 @@ export default function ExpertChat() {
     const sid = await getOrCreateSession();
 
     // Upload file — get a persistent URL
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: pendingFile });
+    const { file_url } = await api.integrations.Core.UploadFile({ file: pendingFile });
 
-    await base44.entities.UploadedDocument.create({
+    await api.entities.UploadedDocument.create({
       session_id: sid,
       file_name: pendingFile.name,
       file_url,
@@ -236,7 +243,7 @@ export default function ExpertChat() {
     } else {
       // Text / DOCX / CSV — extract text content first, then analyse
       setIsExtracting(true);
-      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+      const result = await api.integrations.Core.ExtractDataFromUploadedFile({
         file_url,
         json_schema: {
           type: "object",
@@ -254,8 +261,7 @@ export default function ExpertChat() {
 
       const extractedText = result.output.text;
       const prompt = `תוכן המסמך "${fileName}":\n\n${extractedText}\n\nהנחיית המשתמש: ${instruction || "נתח את המסמך לפי הגישה והמומחיות שלך."}`;
-      // Also pass file_url so the model can cross-reference visually if needed
-      await sendMessage(prompt, file_url);
+      await sendMessage(prompt, null);
     }
   };
 
@@ -273,7 +279,7 @@ export default function ExpertChat() {
   const resetMutation = useMutation({
     mutationFn: async () => {
       if (sessionId) {
-        await base44.entities.ChatSession.update(sessionId, { is_active: false });
+        await api.entities.ChatSession.update(sessionId, { is_active: false });
         deleteConvBlocks(`conv_${sessionId}`);
       }
       queryClient.invalidateQueries({ queryKey: ["sessions", personaId] });

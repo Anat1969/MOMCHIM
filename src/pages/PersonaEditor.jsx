@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ export default function PersonaEditor() {
 
   const { data: persona, isLoading } = useQuery({
     queryKey: ["persona", id],
-    queryFn: () => base44.entities.Persona.filter({ id }),
+    queryFn: () => api.entities.Persona.filter({ id }),
     enabled: isEdit,
   });
 
@@ -58,7 +58,7 @@ export default function PersonaEditor() {
   }, [persona]);
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Persona.create(data),
+    mutationFn: (data) => api.entities.Persona.create(data),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["personas"] });
       navigate(`/persona/${created.id}`);
@@ -66,7 +66,7 @@ export default function PersonaEditor() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Persona.update(form.id, data),
+    mutationFn: (data) => api.entities.Persona.update(form.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["personas"] });
       queryClient.invalidateQueries({ queryKey: ["persona", id] });

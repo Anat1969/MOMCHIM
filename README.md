@@ -1,39 +1,32 @@
-**Welcome to your Base44 project** 
+# חדר המומחים (MOMCHIM)
 
-**About**
+אפליקציה עצמאית לשיחה עם מומחים וירטואליים. היא לא תלויה ב-Base44.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+**כתובת האפליקציה:** https://anat1969.github.io/MOMCHIM/
 
-This project contains everything you need to run your app locally.
+## איך זה עובד
 
-**Edit the code in your local development environment**
+| רכיב | איפה |
+|---|---|
+| האפליקציה | GitHub Pages. נבנית ומתפרסמת אוטומטית מכל דחיפה לענף `standalone` |
+| הנתונים (מומחים, שיחות, מסמכים) | נשמרים בדפדפן (IndexedDB) ומסונכרנים למאגר הפרטי `Anat1969/MOMCHIM-data` |
+| תשובות המומחים | Claude API, עם מפתח אישי שנשמר רק בדפדפן |
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+## הגדרה ראשונה (פעם אחת בכל מכשיר)
 
-**Prerequisites:** 
+במסך **הגדרות** באפליקציה:
+1. **מפתח Claude API**: יוצרים אותו ב-https://console.anthropic.com/settings/keys
+2. **טוקן גיטהאב**: יוצרים Fine-grained token ב-https://github.com/settings/personal-access-tokens/new
+   עם גישה למאגר `MOMCHIM-data` בלבד והרשאת **Contents: Read and write**.
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+## העברת הנתונים מ-Base44
 
+ב-Base44 מייצאים כל טבלה (Persona, ChatSession, Message, UploadedDocument) לקובץ CSV,
+ובאפליקציה בוחרים **הגדרות → ייבוא נתונים**. אפשר לבחור את כל הקבצים יחד.
+
+## פיתוח מקומי
+
+```bash
+npm install
+npm run dev
 ```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
-
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
-
-Run the app: `npm run dev`
-
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)

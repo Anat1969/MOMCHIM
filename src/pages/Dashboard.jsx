@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -25,7 +25,7 @@ function QuickAction({ to, title, description }) {
 export default function Dashboard() {
   const { data: personas = [], isLoading } = useQuery({
     queryKey: ["personas"],
-    queryFn: () => base44.entities.Persona.list("-updated_date"),
+    queryFn: () => api.entities.Persona.list("-updated_date"),
   });
 
   return (
