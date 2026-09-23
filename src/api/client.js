@@ -1,7 +1,8 @@
-// Drop-in replacement for the old Base44 client: same `entities` / `integrations.Core`
-// call shapes, but backed by the browser + GitHub + the Claude API.
-import { entities, uploadFile } from "./store";
+// Single entry point the pages talk to, mirroring the old Base44 client shape.
+import { entities, uploadFile } from "./backend";
 import { invokeLLM, extractText } from "./llm";
+
+export { entities, getFile, isStoredFileUrl, getCounts, isCloud } from "./backend";
 
 export const api = {
   entities,

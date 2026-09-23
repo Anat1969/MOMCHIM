@@ -2,36 +2,29 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import ThemeSwitcher from "./ThemeSwitcher";
 import { getSettings } from "@/api/settings";
-import { getSyncStatus, onSyncStatus } from "@/api/store";
 
-const DOT_COLORS = {
-  synced: "bg-green-500",
-  pending: "bg-amber-400",
-  syncing: "bg-amber-400 animate-pulse",
-  error: "bg-red-500",
-};
 
-function SyncDot() {
-  const [status, setStatus] = useState(getSyncStatus);
-  useEffect(() => onSyncStatus(setStatus), []);
-  const color = DOT_COLORS[status.state];
-  if (!color) return null;
-  return <span title={`סנכרון גיטהאב: ${status.state}`} className={`w-2 h-2 rounded-full ${color}`} />;
-}
-
-function useHasApiKey() {
-  const [hasKey, setHasKey] = useState(() => !!getSettings().anthropicKey);
+/** Names whatever still has to be connected before the app is fully usable. */
+function useMissingSetup() {
+  const read = () => {
+    const { anthropicKey, supabaseKey } = getSettings();
+    const missing = [];
+    if (!supabaseKey) missing.push("מאגר הנתונים");
+    if (!anthropicKey) missing.push("מנוע ה-AI");
+    return missing;
+  };
+  const [missing, setMissing] = useState(read);
   useEffect(() => {
-    const update = () => setHasKey(!!getSettings().anthropicKey);
+    const update = () => setMissing(read());
     window.addEventListener("momchim-settings", update);
     return () => window.removeEventListener("momchim-settings", update);
   }, []);
-  return hasKey;
+  return missing;
 }
 
 export default function AppLayout() {
   const location = useLocation();
-  const hasKey = useHasApiKey();
+  const missing = useMissingSetup();
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -85,16 +78,21 @@ export default function AppLayout() {
               }`}
             >
               הגדרות
-              <SyncDot />
+              {missing.length > 0 && (
+                <span
+                  title="יש הגדרות שצריך להשלים"
+                  className="w-2 h-2 rounded-full bg-amber-400"
+                />
+              )}
             </Link>
             <ThemeSwitcher />
           </nav>
         </div>
       </header>
-      {!hasKey && location.pathname !== "/settings" && (
+      {missing.length > 0 && location.pathname !== "/settings" && (
         <div className="bg-accent/10 border-b border-accent/30 text-sm text-foreground">
           <div className="max-w-7xl mx-auto px-6 py-2.5">
-            כדי שהמומחים יוכלו לענות, צריך לחבר את האפליקציה למנוע ה-AI.{" "}
+            נותר לחבר: {missing.join(" ו")}.{" "}
             <Link to="/settings" className="text-accent font-bold underline">חיבור עכשיו</Link>
           </div>
         </div>

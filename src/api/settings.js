@@ -7,6 +7,11 @@ const DEFAULTS = {
   // on load without spending another round trip.
   keyVerified: false,
   model: "claude-opus-5",
+  // Supabase holds the experts and conversations once these are filled in.
+  // The key is deliberately not shipped in the source: this app is served from
+  // a public repository, and the tables grant access to whoever holds it.
+  supabaseUrl: "https://ktqmwpbzcnzkhjskqisy.supabase.co",
+  supabaseKey: "",
   githubToken: "",
   dataRepo: "Anat1969/MOMCHIM-data",
 };

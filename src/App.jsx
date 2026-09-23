@@ -12,11 +12,13 @@ import ExpertChat from './pages/ExpertChat';
 import Confrontation from './pages/Confrontation';
 import Settings from './pages/Settings';
 import { onDataChange, syncWithGithub } from '@/api/store';
+import { isCloud } from '@/api/backend';
 
 function App() {
   useEffect(() => {
     const off = onDataChange(() => queryClientInstance.invalidateQueries());
-    syncWithGithub();
+    // Supabase is read live; the GitHub mirror only backs the local store.
+    if (!isCloud()) syncWithGithub();
     return off;
   }, []);
 

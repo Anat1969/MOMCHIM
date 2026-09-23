@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFile, isStoredFileUrl } from "@/api/store";
+import { getFile, isStoredFileUrl } from "@/api/backend";
 
 /** Resolves a `stored-file:` URL (browser/GitHub storage) into a URL the browser can display. */
 export function useFileUrl(url) {

@@ -1,7 +1,7 @@
 // Calls Claude directly from the browser with the user's own API key.
 import Anthropic from "@anthropic-ai/sdk";
 import { getSettings } from "./settings";
-import { getFile } from "./store";
+import { getFile } from "./backend";
 import { blobToBase64 } from "./github";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
