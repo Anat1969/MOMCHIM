@@ -6,7 +6,7 @@ import { getSettings, saveSettings } from "@/api/settings";
 import { testApiKey } from "@/api/llm";
 import { checkAccess } from "@/api/github";
 import {
-  syncWithGithub, getSyncStatus, onSyncStatus, exportBackup, importJson, importCsv,
+  syncWithGithub, getSyncStatus, onSyncStatus, exportBackup, importJson, importCsv, resetLocalData,
 } from "@/api/store";
 
 const MODELS = [
@@ -59,6 +59,7 @@ export default function Settings() {
   const [claudeResult, setClaudeResult] = useState(null);
   const [githubResult, setGithubResult] = useState(null);
   const [importResult, setImportResult] = useState(null);
+  const [resetResult, setResetResult] = useState(null);
   const [status, setStatus] = useState(getSyncStatus);
   const [busy, setBusy] = useState("");
   const fileInput = useRef(null);
@@ -100,6 +101,22 @@ export default function Settings() {
       setGithubResult({ ok: true, text: "מחובר. הנתונים סונכרנו." });
     } catch (e) {
       setGithubResult({ ok: false, text: e.message });
+    }
+    setBusy("");
+  };
+
+  const reset = async () => {
+    if (!getSettings().githubToken) {
+      setResetResult({ ok: false, text: "צריך קודם לשמור טוקן גיטהאב, אחרת אין מאיפה לטעון." });
+      return;
+    }
+    if (!window.confirm("למחוק את הנתונים בדפדפן הזה ולטעון מחדש מגיטהאב?")) return;
+    setBusy("reset");
+    try {
+      const counts = await resetLocalData();
+      setResetResult({ ok: true, text: `נטען מחדש: ${counts.map(([n, c]) => `${c} ${n}`).join(", ")}` });
+    } catch (e) {
+      setResetResult({ ok: false, text: e.message });
     }
     setBusy("");
   };
@@ -187,6 +204,16 @@ export default function Settings() {
             </span>
           </div>
           <Feedback result={githubResult} />
+          <div className="border-t border-border/40 pt-4">
+            <p className="text-sm text-muted-foreground mb-2">
+              אם הנתונים בדפדפן הזה לא תואמים למאגר — למשל כפילויות — אפשר למחוק את העותק המקומי ולטעון מחדש מגיטהאב.
+              במאגר עצמו לא נמחק דבר.
+            </p>
+            <Button variant="outline" onClick={reset} disabled={busy === "reset"}>
+              {busy === "reset" ? "טוען…" : "מחק מקומית וטען מחדש מגיטהאב"}
+            </Button>
+            <Feedback result={resetResult} />
+          </div>
         </Section>
 
         <Section title="גיבוי וייבוא">

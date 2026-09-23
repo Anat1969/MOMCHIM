@@ -33,3 +33,4 @@ async function run(store, mode, fn) {
 export const idbGet = (store, key) => run(store, "readonly", (s) => s.get(key));
 export const idbSet = (store, key, value) => run(store, "readwrite", (s) => s.put(value, key));
 export const idbDelete = (store, key) => run(store, "readwrite", (s) => s.delete(key));
+export const idbClear = (store) => run(store, "readwrite", (s) => s.clear());

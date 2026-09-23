@@ -2,7 +2,7 @@
 // when a GitHub token is configured, mirrored to a private GitHub repo:
 //   data/db.json   – all entities
 //   files/<id>     – uploaded files
-import { idbGet, idbSet } from "./idb";
+import { idbGet, idbSet, idbClear } from "./idb";
 import { isGithubConfigured, getRaw, getSha, putFile, blobToBase64 } from "./github";
 
 export const ENTITY_NAMES = ["Persona", "ChatSession", "Message", "UploadedDocument"];
@@ -249,6 +249,19 @@ export async function syncWithGithub() {
   } catch (e) {
     setStatus("error", e.message);
   }
+}
+
+/** Wipes everything held in this browser, then re-pulls the GitHub copy.
+ *  Use when the local copy has drifted — nothing is deleted on GitHub. */
+export async function resetLocalData() {
+  await ready();
+  state = emptyState();
+  dbSha = null;
+  await idbSet("kv", "state", state);
+  await idbClear("files");
+  notifyData();
+  await syncWithGithub();
+  return ENTITY_NAMES.map((n) => [n, state.entities[n].length]);
 }
 
 // ─── Backup / import ────────────────────────────────────────────────────────
