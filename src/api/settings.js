@@ -3,6 +3,9 @@ const KEY = "momchim-settings";
 
 const DEFAULTS = {
   anthropicKey: "",
+  // Set once the key has actually answered a call, so the UI can say "connected"
+  // on load without spending another round trip.
+  keyVerified: false,
   model: "claude-opus-5",
   githubToken: "",
   dataRepo: "Anat1969/MOMCHIM-data",

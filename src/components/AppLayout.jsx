@@ -94,8 +94,8 @@ export default function AppLayout() {
       {!hasKey && location.pathname !== "/settings" && (
         <div className="bg-accent/10 border-b border-accent/30 text-sm text-foreground">
           <div className="max-w-7xl mx-auto px-6 py-2.5">
-            כדי שהמומחים יוכלו לענות, יש להגדיר מפתח Claude API.{" "}
-            <Link to="/settings" className="text-accent font-bold underline">למסך ההגדרות</Link>
+            כדי שהמומחים יוכלו לענות, צריך לחבר את האפליקציה למנוע ה-AI.{" "}
+            <Link to="/settings" className="text-accent font-bold underline">חיבור עכשיו</Link>
           </div>
         </div>
       )}
