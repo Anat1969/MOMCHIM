@@ -30,3 +30,7 @@ dist-ssr
 .env
 .vite
 base44/.app.jsonc
+
+# Personal data exports — this repo is public, these must never be committed
+מומחים/
+*_export.csv

@@ -1,28 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getSettings, saveSettings } from "@/api/settings";
-import { checkAccess } from "@/api/github";
-import {
-  syncWithGithub, getSyncStatus, onSyncStatus, exportBackup, importJson, importCsv, resetLocalData,
-} from "@/api/store";
+import { exportBackup, importJson, importCsv, resetLocalData } from "@/api/store";
 
 const MODELS = [
   { id: "claude-opus-5", label: "Claude Opus 5 — איכות מרבית (מומלץ)" },
   { id: "claude-sonnet-5", label: "Claude Sonnet 5 — מהיר וזול יותר" },
   { id: "claude-haiku-4-5", label: "Claude Haiku 4.5 — הכי מהיר וזול" },
 ];
-
-const STATUS_TEXT = {
-  off: "כבוי",
-  pending: "ממתין לשמירה…",
-  syncing: "מסנכרן…",
-  synced: "מסונכרן",
-  error: "שגיאה",
-};
-
-const val = (ref) => (ref.current?.value || "").trim();
 
 function Group({ title, description, children }) {
   return (
@@ -47,44 +33,21 @@ function Feedback({ result }) {
 }
 
 export default function AdvancedSettings() {
-  const saved = getSettings();
   const [open, setOpen] = useState(false);
-  const [model, setModel] = useState(saved.model);
-  const [status, setStatus] = useState(getSyncStatus);
-  const [githubResult, setGithubResult] = useState(null);
+  const [model, setModel] = useState(getSettings().model);
   const [importResult, setImportResult] = useState(null);
   const [resetResult, setResetResult] = useState(null);
   const [busy, setBusy] = useState("");
-  const tokenRef = useRef(null);
-  const repoRef = useRef(null);
   const fileInput = useRef(null);
-
-  useEffect(() => onSyncStatus(setStatus), []);
 
   const changeModel = (e) => {
     setModel(e.target.value);
     saveSettings({ model: e.target.value });
   };
 
-  const saveGithub = async () => {
-    const githubToken = val(tokenRef);
-    const dataRepo = val(repoRef);
-    saveSettings({ githubToken, dataRepo });
-    if (!githubToken) { setGithubResult({ ok: true, text: "הגיבוי כובה." }); return; }
-    setBusy("github");
-    try {
-      await checkAccess();
-      await syncWithGithub();
-      setGithubResult({ ok: true, text: "מחובר. הנתונים סונכרנו." });
-    } catch (e) {
-      setGithubResult({ ok: false, text: e.message });
-    }
-    setBusy("");
-  };
-
   const reset = async () => {
     if (!getSettings().githubToken) {
-      setResetResult({ ok: false, text: "צריך קודם לשמור קוד גיטהאב, אחרת אין מאיפה לטעון." });
+      setResetResult({ ok: false, text: "צריך קודם להפעיל שמירה אוטומטית, אחרת אין מאיפה לטעון." });
       return;
     }
     if (!window.confirm("למחוק את הנתונים בדפדפן הזה ולטעון מחדש מגיטהאב?")) return;
@@ -135,7 +98,7 @@ export default function AdvancedSettings() {
           <span>
             <span className="block font-bold font-frank text-foreground">הגדרות מתקדמות</span>
             <span className="block text-sm text-muted-foreground mt-0.5">
-              גיבוי בענן, בחירת מודל, ייצוא וייבוא נתונים
+              בחירת מודל, גיבוי לקובץ, ייבוא נתונים
             </span>
           </span>
           <ChevronDown
@@ -164,49 +127,8 @@ export default function AdvancedSettings() {
           </Group>
 
           <Group
-            title="גיבוי בגיטהאב"
-            description="הנתונים תמיד נשמרים בדפדפן הזה. חיבור לגיטהאב מגבה אותם ומאפשר לראות אותם גם במכשירים אחרים."
-          >
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="gh-token" className="block text-sm font-medium text-foreground mb-1.5">
-                  קוד גישה לגיטהאב
-                </label>
-                <Input
-                  id="gh-token" ref={tokenRef} type="password" dir="ltr" autoComplete="off"
-                  defaultValue={saved.githubToken} placeholder="github_pat_..."
-                />
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  נוצר ב-
-                  <a
-                    className="text-accent underline mx-1"
-                    href="https://github.com/settings/personal-access-tokens/new"
-                    target="_blank" rel="noopener noreferrer"
-                  >
-                    GitHub → Fine-grained token
-                  </a>
-                  עם הרשאת Contents: Read and write למאגר הנתונים בלבד.
-                </p>
-              </div>
-              <div>
-                <label htmlFor="gh-repo" className="block text-sm font-medium text-foreground mb-1.5">
-                  מאגר הנתונים
-                </label>
-                <Input id="gh-repo" ref={repoRef} dir="ltr" defaultValue={saved.dataRepo} />
-              </div>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button onClick={saveGithub} disabled={busy === "github"}>
-                {busy === "github" ? "מתחבר…" : "שמירה וסנכרון"}
-              </Button>
-              <span className="text-sm text-muted-foreground">מצב: {STATUS_TEXT[status.state]}</span>
-            </div>
-            <Feedback result={githubResult} />
-          </Group>
-
-          <Group
             title="גיבוי לקובץ וייבוא"
-            description="ייצוא שומר את כל המומחים והשיחות לקובץ אחד. בייבוא אפשר לבחור קובץ גיבוי או קובצי CSV מ-Base44. רשומות קיימות לא נמחקות."
+            description="ייצוא שומר את כל המומחים והשיחות לקובץ אחד במחשב. בייבוא אפשר לבחור קובץ גיבוי או קובצי CSV מ-Base44. רשומות קיימות לא נמחקות."
           >
             <div className="flex gap-3 flex-wrap">
               <Button variant="outline" onClick={download}>ייצוא לקובץ</Button>

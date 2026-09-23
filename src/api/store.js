@@ -251,6 +251,12 @@ export async function syncWithGithub() {
   }
 }
 
+/** How many records are held right now, as [entity, count] pairs. */
+export async function getCounts() {
+  await ready();
+  return ENTITY_NAMES.map((n) => [n, state.entities[n].length]);
+}
+
 /** Wipes everything held in this browser, then re-pulls the GitHub copy.
  *  Use when the local copy has drifted — nothing is deleted on GitHub. */
 export async function resetLocalData() {

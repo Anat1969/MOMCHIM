@@ -1,5 +1,6 @@
 import Breadcrumbs from "../components/Breadcrumbs";
 import ClaudeKeyCard from "../components/ClaudeKeyCard";
+import GithubBackupCard from "../components/GithubBackupCard";
 import AdvancedSettings from "../components/AdvancedSettings";
 
 export default function Settings() {
@@ -10,6 +11,7 @@ export default function Settings() {
 
       <div className="space-y-5">
         <ClaudeKeyCard />
+        <GithubBackupCard />
         <AdvancedSettings />
       </div>
 
