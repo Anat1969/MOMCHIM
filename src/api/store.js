@@ -272,9 +272,25 @@ export async function resetLocalData() {
 
 // ─── Backup / import ────────────────────────────────────────────────────────
 
+function base64ToBlob(b64, type) {
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return new Blob([buf], { type: type || "application/octet-stream" });
+}
+
+/** A self-contained backup: records plus the bytes of every uploaded file, so
+ *  restoring it needs nothing else. */
 export async function exportBackup() {
   await ready();
-  return JSON.stringify(state, null, 2);
+  const blobs = {};
+  for (const id of Object.keys(state.files)) {
+    try {
+      const blob = await idbGet("files", id);
+      if (blob) blobs[id] = await blobToBase64(blob);
+    } catch { /* a missing file should not sink the whole backup */ }
+  }
+  return JSON.stringify({ ...state, blobs }, null, 2);
 }
 
 async function mergeIn(incoming) {
@@ -287,8 +303,21 @@ async function mergeIn(incoming) {
 /** Accepts a backup file from this app, or `{ Persona: [...], Message: [...] }`. */
 export async function importJson(text) {
   const data = JSON.parse(text);
-  const incoming = data.entities ? normalize(data) : normalize({ entities: data });
+  const incoming = data.entities
+    ? normalize({ entities: data.entities, files: data.files })
+    : normalize({ entities: data });
   await mergeIn(incoming);
+
+  // Restore the file bytes a full backup carries, without clobbering anything
+  // this browser already holds.
+  for (const [id, b64] of Object.entries(data.blobs || {})) {
+    try {
+      if (!(await idbGet("files", id))) {
+        await idbSet("files", id, base64ToBlob(b64, state.files[id]?.type));
+      }
+    } catch { /* keep going: one unreadable file should not fail the import */ }
+  }
+
   return ENTITY_NAMES.map((n) => [n, incoming.entities[n].length]).filter(([, c]) => c);
 }
 

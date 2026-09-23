@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Breadcrumbs from "../components/Breadcrumbs";
 import PersonaCard from "../components/PersonaCard";
 import EmptyState from "../components/EmptyState";
+import RestoreBackup from "../components/RestoreBackup";
 
 function QuickAction({ to, title, description }) {
   return (
@@ -48,8 +49,10 @@ export default function Dashboard() {
           ) : personas.length === 0 ? (
             <EmptyState
               title="עדיין אין מומחים"
-              description="צור את המומחה הראשון שלך — תבחר לו שם, תחום, וטון דיבור, והוא יהיה מוכן לשיחה."
-            />
+              description="אם כבר יש לך מומחים מקובץ גיבוי, אפשר לטעון אותם כאן. אחרת אפשר ליצור מומחה חדש — שם, תחום וטון דיבור, והוא מוכן לשיחה."
+            >
+              <RestoreBackup />
+            </EmptyState>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {personas.map((persona, i) => (
