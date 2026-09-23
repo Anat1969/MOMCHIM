@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Check, CircleAlert, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getSettings, saveSettings } from "@/api/settings";
+import { getSettings, saveSettings, getPersistError } from "@/api/settings";
 import { testApiKey } from "@/api/llm";
 
 const CONSOLE_URL = "https://console.anthropic.com/settings/keys";
@@ -36,6 +36,7 @@ export default function ClaudeKeyCard() {
   const [verified, setVerified] = useState(saved.keyVerified && !!saved.anthropicKey);
   const [editing, setEditing] = useState(!saved.anthropicKey);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   const [busy, setBusy] = useState(false);
   const keyRef = useRef(null);
 
@@ -55,6 +56,11 @@ export default function ClaudeKeyCard() {
       saveSettings({ keyVerified: true });
       setVerified(true);
       setEditing(false);
+      setWarning(
+        getPersistError()
+          ? "הקוד עובד, אבל הדפדפן לא מאפשר לשמור אותו. הוא יישכח כשתסגרי את הלשונית — בדפדפן פרטי או כשחסימת נתוני אתרים מופעלת זה מה שקורה."
+          : ""
+      );
     } catch (e) {
       setVerified(false);
       setError(explain(e));
@@ -135,11 +141,17 @@ export default function ClaudeKeyCard() {
           </>
         )}
 
-        <div aria-live="polite">
+        <div aria-live="polite" className="space-y-3">
           {error && (
             <div className="flex items-start gap-2.5 rounded-lg bg-destructive/10 border border-destructive/25 px-3.5 py-3">
               <CircleAlert size={16} className="mt-0.5 shrink-0 text-destructive" aria-hidden="true" />
               <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+          {warning && (
+            <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3.5 py-3">
+              <CircleAlert size={16} className="mt-0.5 shrink-0 text-amber-600" aria-hidden="true" />
+              <p className="text-sm text-amber-700">{warning}</p>
             </div>
           )}
         </div>

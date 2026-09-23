@@ -11,7 +11,14 @@ const DEFAULTS = {
   dataRepo: "Anat1969/MOMCHIM-data",
 };
 
-export function getSettings() {
+// Settings are held in memory and only mirrored to localStorage. Reading them
+// back out of storage would make every caller depend on the write having
+// succeeded — and it can fail (quota, private mode, site data blocked), which
+// silently left the app acting as though no key had been entered.
+let cache = null;
+let persistError = null;
+
+function readStored() {
   try {
     return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || "{}") };
   } catch {
@@ -19,9 +26,25 @@ export function getSettings() {
   }
 }
 
+export function getSettings() {
+  if (!cache) cache = readStored();
+  return { ...cache };
+}
+
 export function saveSettings(patch) {
-  const next = { ...getSettings(), ...patch };
-  try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+  cache = { ...getSettings(), ...patch };
+  try {
+    localStorage.setItem(KEY, JSON.stringify(cache));
+    persistError = null;
+  } catch (e) {
+    persistError = e;
+  }
   window.dispatchEvent(new Event("momchim-settings"));
-  return next;
+  return { ...cache };
+}
+
+/** Set when the last save could not be written to disk — the settings still
+ *  apply for this session, but will be gone once the tab closes. */
+export function getPersistError() {
+  return persistError;
 }
