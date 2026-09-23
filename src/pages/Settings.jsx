@@ -49,34 +49,50 @@ function Feedback({ result }) {
   );
 }
 
+/** Reads the field's live DOM value — a browser password manager can fill an
+ *  input without firing React's change event, which would leave state empty. */
+const val = (ref) => (ref.current?.value || "").trim();
+
 export default function Settings() {
-  const [form, setForm] = useState(getSettings);
+  const saved = getSettings();
+  const [model, setModel] = useState(saved.model);
   const [claudeResult, setClaudeResult] = useState(null);
   const [githubResult, setGithubResult] = useState(null);
   const [importResult, setImportResult] = useState(null);
   const [status, setStatus] = useState(getSyncStatus);
   const [busy, setBusy] = useState("");
   const fileInput = useRef(null);
+  const keyRef = useRef(null);
+  const tokenRef = useRef(null);
+  const repoRef = useRef(null);
 
   useEffect(() => onSyncStatus(setStatus), []);
 
-  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value.trim() }));
-
   const saveClaude = async () => {
-    saveSettings({ anthropicKey: form.anthropicKey, model: form.model });
+    const anthropicKey = val(keyRef);
+    if (!anthropicKey) {
+      setClaudeResult({ ok: false, text: "שדה המפתח ריק. הדבק את המפתח ונסה שוב." });
+      return;
+    }
+    saveSettings({ anthropicKey, model });
     setBusy("claude");
     try {
       await testApiKey();
-      setClaudeResult({ ok: true, text: "המפתח תקין ונשמר." });
+      setClaudeResult({ ok: true, text: "המפתח תקין ונשמר. אפשר להתחיל לשוחח." });
     } catch (e) {
-      setClaudeResult({ ok: false, text: `המפתח נשמר, אך הבדיקה נכשלה: ${e.message}` });
+      const text = /401|authentication|invalid x-api-key/i.test(e.message)
+        ? "המפתח נשמר, אך Anthropic דחתה אותו. בדוק שהעתקת אותו במלואו ושהוא עדיין פעיל."
+        : `המפתח נשמר, אך הבדיקה נכשלה: ${e.message}`;
+      setClaudeResult({ ok: false, text });
     }
     setBusy("");
   };
 
   const saveGithub = async () => {
-    saveSettings({ githubToken: form.githubToken, dataRepo: form.dataRepo });
-    if (!form.githubToken) { setGithubResult({ ok: true, text: "הסנכרון כובה." }); return; }
+    const githubToken = val(tokenRef);
+    const dataRepo = val(repoRef);
+    saveSettings({ githubToken, dataRepo });
+    if (!githubToken) { setGithubResult({ ok: true, text: "הסנכרון כובה." }); return; }
     setBusy("github");
     try {
       await checkAccess();
@@ -128,12 +144,12 @@ export default function Settings() {
             והדבק אותו כאן. המפתח נשמר רק בדפדפן הזה ולא נשלח לשום מקום מלבד Anthropic.
           </p>
           <Field label="מפתח API">
-            <Input type="password" dir="ltr" value={form.anthropicKey} onChange={set("anthropicKey")} placeholder="sk-ant-..." />
+            <Input ref={keyRef} type="password" dir="ltr" defaultValue={saved.anthropicKey} placeholder="sk-ant-..." />
           </Field>
           <Field label="מודל">
             <select
-              value={form.model}
-              onChange={set("model")}
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
               className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
             >
               {MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
@@ -157,10 +173,10 @@ export default function Settings() {
             עם גישה למאגר הנתונים בלבד והרשאת <b>Contents: Read and write</b>.
           </p>
           <Field label="טוקן גיטהאב">
-            <Input type="password" dir="ltr" value={form.githubToken} onChange={set("githubToken")} placeholder="github_pat_..." />
+            <Input ref={tokenRef} type="password" dir="ltr" defaultValue={saved.githubToken} placeholder="github_pat_..." />
           </Field>
           <Field label="מאגר הנתונים" hint="בפורמט owner/repo. המאגר חייב להיות פרטי.">
-            <Input dir="ltr" value={form.dataRepo} onChange={set("dataRepo")} />
+            <Input ref={repoRef} dir="ltr" defaultValue={saved.dataRepo} />
           </Field>
           <div className="flex items-center gap-3 flex-wrap">
             <Button onClick={saveGithub} disabled={busy === "github"}>
